@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="../LuckyMaze.Domain/LuckyMaze.Domain.csproj" />
+  <Project Path="../LuckyMaze.Infrastructure/LuckyMaze.Infrastructure.csproj" />
+  <Project Path="../LuckyMaze.Tests/LuckyMaze.Tests.csproj" />
+  <Project Path="../LuckyMazy.Application/LuckyMaze.Application.csproj" />
+  <Project Path="LuckyMaze.API.csproj" />
+</Solution>
