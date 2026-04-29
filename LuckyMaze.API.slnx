@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/LuckyMaze.API/LuckyMaze.API.csproj" />
+  <Project Path="src/LuckyMaze.Application/LuckyMaze.Application.csproj" />
+  <Project Path="src/LuckyMaze.Domain/LuckyMaze.Domain.csproj" />
+  <Project Path="src/LuckyMaze.Infrastructure/LuckyMaze.Infrastructure.csproj" />
+  <Project Path="src/LuckyMaze.Tests/LuckyMaze.Tests.csproj" Id="a7e3c1d2-9b4f-4e8a-bc56-3f1d9e2c8a47" />
+</Solution>
