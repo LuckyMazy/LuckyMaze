@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using LuckyMaze.Domain;
 using LuckyMaze.Domain.Enums;
 
-
 namespace LuckyMaze.Infrastructure.Services
 {
     public class UserService(IOidcService oidcService, LuckyMazeDbContext dbContext) : IUserService
@@ -38,8 +37,6 @@ namespace LuckyMaze.Infrastructure.Services
 
             if (user is null)
             {
-                var settings = await dbContext.AdminSettings.SingleAsync(cancellationToken);
-
                 user = new User
                 {
                     ExternalId = oidcUser.ExternalId,
@@ -47,7 +44,6 @@ namespace LuckyMaze.Infrastructure.Services
                     DisplayName = displayName,
                     AvatarUrl = oidcUser.AvatarUrl,
                     Role = role,
-                    CreditBalance = settings.StartingBalance,
                     Preferences = new UserPreferences()
                 };
 

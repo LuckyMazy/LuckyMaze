@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LuckyMaze.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddedUsers : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -21,6 +21,7 @@ namespace LuckyMaze.Infrastructure.Migrations
                     DisplayName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     AvatarUrl = table.Column<string>(type: "text", nullable: true),
+                    IsLocked = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

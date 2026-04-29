@@ -12,7 +12,7 @@
 docker compose -f compose.dev.yml up -d
 ```
 
-This starts three containers:
+This starts:
 
 - **Postgres** on port `3135` (mapped from container port `5432`)
 - **Pocket ID** (OIDC provider) on port `1411`
@@ -23,8 +23,6 @@ see [`dev_pocket_id_setup.md`](./dev_pocket_id_setup.md).
 ## Configure secrets
 
 All secrets live in **user secrets**.
-
-Pick one of the two options below.
 
 ### Option 1 — CLI
 
@@ -39,12 +37,7 @@ dotnet user-secrets set "Oidc:ClientId" "<client-id-from-pocket-id>"
 dotnet user-secrets set "Oidc:RedirectUri" "http://localhost:5173/callback"
 dotnet user-secrets set "Oidc:PostLogoutRedirectUri" "http://localhost:5173"
 dotnet user-secrets set "Oidc:Scope" "openid profile email groups"
-
-dotnet user-secrets set "OpenRouter:ApiKey" "<your-openrouter-api-key>"
-dotnet user-secrets set "OpenRouter:DefaultModel" "openai/gpt-5"
 ```
-
-The `OpenRouter:ApiKey` is obtained from [openrouter.ai/keys](https://openrouter.ai/keys).
 
 The `Oidc:ClientId` is obtained during the Pocket ID setup — see step 7 of
 [`dev_pocket_id_setup.md`](./dev_pocket_id_setup.md).
@@ -73,10 +66,6 @@ Paste in:
     "RedirectUri": "http://localhost:5173/callback",
     "PostLogoutRedirectUri": "http://localhost:5173",
     "Scope": "openid profile email groups picture"
-  },
-  "OpenRouter": {
-    "ApiKey": "<your-openrouter-api-key>",
-    "DefaultModel": "openai/gpt-5"
   }
 }
 ```

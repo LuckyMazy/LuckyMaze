@@ -1,4 +1,4 @@
-﻿using LuckyMaze.Domain.Enums;
+using LuckyMaze.Domain.Enums;
 
 namespace LuckyMaze.Domain
 {
@@ -9,7 +9,6 @@ namespace LuckyMaze.Domain
         public string DisplayName { get; set; } = "LuckyMaze User";
         public UserRole Role { get; set; } = UserRole.User;
         public string? AvatarUrl { get; set; }
-        public long CreditBalance { get; set; }
         public bool IsLocked { get; set; }
         public required UserPreferences Preferences { get; set; } = new UserPreferences();
     }

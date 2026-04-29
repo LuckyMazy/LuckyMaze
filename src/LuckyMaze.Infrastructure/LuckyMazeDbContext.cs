@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using LuckyMaze.Domain;
 
@@ -7,11 +7,6 @@ namespace LuckyMaze.Infrastructure
     public class LuckyMazeDbContext(DbContextOptions<LuckyMazeDbContext> options) : DbContext(options)
     {
         public DbSet<User> Users => Set<User>();
-        public DbSet<Chat> Chats => Set<Chat>();
-        public DbSet<Message> Messages => Set<Message>();
-        public DbSet<ModelListEntry> ModelListEntries => Set<ModelListEntry>();
-        public DbSet<AdminSettings> AdminSettings => Set<AdminSettings>();
-        public DbSet<Model> Models => Set<Model>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,9 +30,6 @@ namespace LuckyMaze.Infrastructure
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
                 if (entry.State == EntityState.Modified)
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
-
-            if (ChangeTracker.Entries<AdminSettings>().Any(e => e.State == EntityState.Deleted))
-                throw new InvalidOperationException("AdminSettings cannot be deleted");
         }
     }
 
