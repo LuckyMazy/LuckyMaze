@@ -1,25 +1,20 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using LuckyMaze.API.Extensions;
 using LuckyMaze.Infrastructure;
-using LuckyMaze.Infrastructure.Clients;
-using LuckyMaze.Infrastructure.Extensions;
 using LuckyMaze.Infrastructure.Services;
-using LuckyMaze.Infrastructure.BackgroundServices;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
-// Controllers + JSON
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-// Swagger / OpenAPI
 builder.Services.AddSwaggerGen(options =>
 {
     var authority = builder.Configuration["Oidc:Authority"]
@@ -52,10 +47,8 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Mediator & Validation
 builder.Services.AddMediator(options => { options.ServiceLifetime = ServiceLifetime.Scoped; });
 
-// DBContext
 builder.Services.AddDbContext<LuckyMazeDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("LuckyMazeDatabase"),
@@ -67,18 +60,11 @@ builder.Services.AddDbContext<LuckyMazeDbContext>(options =>
             )
     ));
 
-builder.Services.AddHttpClient();
-builder.Services.AddSemanticKernel(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 
-// Services
 builder.Services.AddScoped<IOidcService, OidcService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IOpenRouterClient, OpenRouterClient>();
-builder.Services.AddScoped<ICreditsService, CreditsService>();
-builder.Services.AddHostedServices();
 
-// Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -90,7 +76,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     })
     .AddUserSync();
 
-// Authorization
 builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
@@ -98,11 +83,8 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// DB
 app.ApplyMigrations();
-await app.ApplySeedsAsync();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
