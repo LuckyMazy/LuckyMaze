@@ -1,7 +1,7 @@
-using Mediator;
-using Microsoft.AspNetCore.Mvc;
 using LuckyMaze.Application.Dtos;
 using LuckyMaze.Application.Queries;
+using Mediator;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LuckyMaze.API.Controllers
 {
