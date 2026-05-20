@@ -6,6 +6,8 @@ using LuckyMaze.API.Extensions;
 using LuckyMaze.Infrastructure;
 using LuckyMaze.Infrastructure.Services;
 using System.Text.Json.Serialization;
+using LuckyMaze.API.Controllers;
+using LuckyMaze.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,13 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.MaximumReceiveMessageSize = 64 * 1024;
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -64,6 +73,8 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IOidcService, OidcService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<LuckyMaze.Application.Services.ConnectionManager>();
+builder.Services.AddSingleton<LuckyMaze.Application.Services.GameManager>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -103,5 +114,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<GameSyncHub>("/gamehub");
 
 app.Run();
