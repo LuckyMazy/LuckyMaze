@@ -61,6 +61,7 @@ builder.Services.AddDbContext<LuckyMazeDbContext>(options =>
     ));
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<IOidcService, OidcService>();
 builder.Services.AddScoped<IUserService, UserService>();
