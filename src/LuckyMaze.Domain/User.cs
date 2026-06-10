@@ -10,6 +10,8 @@ namespace LuckyMaze.Domain
         public UserRole Role { get; set; } = UserRole.User;
         public string? AvatarUrl { get; set; }
         public bool IsLocked { get; set; }
+        public decimal Balance { get; set; } = 1000.00m;
+        public bool IsReady { get; set; }
         public required UserPreferences Preferences { get; set; } = new UserPreferences();
     }
 }

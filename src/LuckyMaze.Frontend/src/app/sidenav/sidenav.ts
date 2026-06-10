@@ -10,6 +10,9 @@ import {
   lucideSun,
   lucideMoon,
   lucideMonitor,
+  lucideGamepad2,
+  lucideTrophy,
+  lucideHistory,
 } from '@ng-icons/lucide';
 import { ThemeService, ThemeMode } from '../shared/services/theme.service';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan-ng/helm/sidebar';
@@ -28,6 +31,9 @@ import { UserStore } from '../shared/stores/UserStore.store';
       lucideSun,
       lucideMoon,
       lucideMonitor,
+      lucideGamepad2,
+      lucideTrophy,
+      lucideHistory,
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

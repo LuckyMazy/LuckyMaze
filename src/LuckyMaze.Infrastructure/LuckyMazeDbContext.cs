@@ -7,6 +7,9 @@ namespace LuckyMaze.Infrastructure
     public class LuckyMazeDbContext(DbContextOptions<LuckyMazeDbContext> options) : DbContext(options)
     {
         public DbSet<User> Users => Set<User>();
+        public DbSet<Maze> Mazes => Set<Maze>();
+        public DbSet<Game> Games => Set<Game>();
+        public DbSet<Bet> Bets => Set<Bet>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,7 +41,8 @@ namespace LuckyMaze.Infrastructure
         public LuckyMazeDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<LuckyMazeDbContext>();
-            optionsBuilder.UseNpgsql();
+            var connectionString = "Host=localhost;Port=3135;Database=luckymaze-dev;Username=postgres;Password=d4vpas8w0rd13!!!";
+            optionsBuilder.UseNpgsql(connectionString);
             return new LuckyMazeDbContext(optionsBuilder.Options);
         }
     }

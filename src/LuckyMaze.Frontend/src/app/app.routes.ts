@@ -8,7 +8,12 @@ export const routes: Routes = [
     path: '',
     component: AppLayout,
     canActivateChild: [autoLoginPartialRoutesGuard],
-    children: [{ path: '', component: Home }],
+    children: [
+      { path: '', component: Home },
+      { path: 'lobby', loadComponent: () => import('./lobby/lobby').then(m => m.LobbyComponent) },
+      { path: 'leaderboard', loadComponent: () => import('./leaderboard/leaderboard').then(m => m.LeaderboardComponent) },
+      { path: 'history', loadComponent: () => import('./history/history').then(m => m.HistoryComponent) },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];

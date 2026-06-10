@@ -5,6 +5,10 @@ using Microsoft.OpenApi;
 using LuckyMaze.API.Extensions;
 using LuckyMaze.Infrastructure;
 using LuckyMaze.Infrastructure.Services;
+using LuckyMaze.Application.Services;
+using LuckyMaze.API.Services;
+using LuckyMaze.API.Hubs;
+using LuckyMaze.Domain;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,8 +67,26 @@ builder.Services.AddDbContext<LuckyMazeDbContext>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCorsPolicy", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200", "http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
+builder.Services.AddSignalR();
 builder.Services.AddScoped<IOidcService, OidcService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IMazeGenerator, MazeGenerator>();
+builder.Services.AddSingleton<IAiSolver, AiSolver>();
+builder.Services.AddSingleton<IMazeHardwareService, MazeHardwareService>();
+builder.Services.AddSingleton<IGameNotificationService, GameNotificationService>();
+builder.Services.AddSingleton<GameManager>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GameManager>());
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -101,8 +123,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCors("DefaultCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<GameHub>("/hubs/game");
 
 app.Run();
