@@ -61,7 +61,6 @@ export const GameStore = signalStore(
         return;
       }
 
-      // 1. Subscribe to SignalR events
       subscriptions.push(
         signalrService.connectionStatus$.subscribe((status) => {
           patchState(store, { connectionStatus: status });
@@ -113,7 +112,6 @@ export const GameStore = signalStore(
         })
       );
 
-      // 2. Start WebSocket connection
       try {
         await signalrService.startConnection();
       } catch (err) {

@@ -1,88 +1,77 @@
 <luckymaze-content-header>
   <div slot="left" class="flex items-center gap-2">
-    <a routerLink="/" class="size-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all">
-      <ng-icon name="lucideArrowLeft" class="size-4" />
+    <a routerLink="/" hlmBtn variant="ghost" size="icon-sm" aria-label="Back to home">
+      <ng-icon name="lucideArrowLeft" />
     </a>
-    <span class="font-semibold text-lg tracking-wide bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Spielverlauf</span>
+    <span class="text-lg font-semibold tracking-tight">Game history</span>
   </div>
 </luckymaze-content-header>
 
-<div class="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto bg-slate-950/20 text-slate-100 min-h-0">
-  <div class="max-w-3xl mx-auto w-full flex flex-col gap-6">
-
-    <div class="flex flex-col gap-2">
-      <h2 class="text-2xl font-black tracking-tight flex items-center gap-2">
-        <ng-icon name="lucideHistory" class="text-indigo-400 size-7" />
-        <span>Historischer Spielverlauf</span>
+<div class="flex-1 overflow-y-auto p-4 md:p-8">
+  <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div class="flex flex-col gap-1">
+      <h2 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <ng-icon name="lucideHistory" class="text-muted-foreground" />
+        Past rounds
       </h2>
-      <p class="text-slate-400 text-sm">
-        Übersicht über die letzten durchgeführten Spielrunden, die erreichten Ausgänge der KI und die Zeiten.
+      <p class="text-sm text-muted-foreground">
+        The exits the AI reached in recent rounds, with start and end times.
       </p>
     </div>
 
-    <!-- History Container Card -->
-    <div class="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-xl">
-      
-      <!-- Loading State -->
-      <div *ngIf="isLoading()" class="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-        <ng-icon name="lucideHistory" class="size-10 text-indigo-500/30 animate-pulse" />
-        <span>Lade Spielverlauf...</span>
-      </div>
-
-      <!-- Empty State -->
-      <div *ngIf="!isLoading() && history().length === 0" class="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
-        <ng-icon name="lucideHistory" class="size-10 text-slate-700" />
-        <span>Bisher wurden keine Runden gespielt.</span>
-      </div>
-
-      <!-- History List -->
-      <div *ngIf="!isLoading() && history().length > 0" class="divide-y divide-white/5">
-        
-        <!-- Header row -->
-        <div class="grid grid-cols-12 px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400 bg-white/5">
-          <div class="col-span-3">Spiel ID / Status</div>
-          <div class="col-span-4 text-center">Gewinnender Ausgang</div>
-          <div class="col-span-5 text-right">Start- / Endzeit</div>
+    <section hlmCard>
+      @if (isLoading()) {
+        <div class="flex items-center justify-center gap-3 py-16 text-muted-foreground">
+          <hlm-spinner class="size-5" />
+          <span>Loading history…</span>
         </div>
-
-        <!-- History row -->
-        <div *ngFor="let game of history()" class="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/5 transition-colors duration-250">
-          
-          <!-- Game Status/ID -->
-          <div class="col-span-3 flex flex-col gap-1">
-            <span class="font-mono text-xs font-semibold text-slate-400">#{{ game.id.substring(0, 8) }}</span>
-            <div class="flex items-center gap-1.5">
-              <span class="size-2 rounded-full" 
-                [ngClass]="{
-                  'bg-emerald-500': game.state === 'Finished', 
-                  'bg-indigo-500 animate-ping': game.state !== 'Finished'
-                }"></span>
-              <span class="text-xs font-semibold uppercase text-slate-300">{{ game.state }}</span>
-            </div>
-          </div>
-
-          <!-- Winning Exit -->
-          <div class="col-span-4 flex justify-center">
-            @if (game.winningExit) {
-              <span class="px-3 py-1 rounded-full text-xs font-bold bg-orange-500/10 border border-orange-500/20 text-orange-400">
-                {{ game.winningExit }}
-              </span>
-            } @else {
-              <span class="text-xs text-slate-500 italic">Keine Auswertung</span>
-            }
-          </div>
-
-          <!-- Time info -->
-          <div class="col-span-5 text-right flex flex-col gap-0.5 text-xs text-slate-400">
-            <div>Start: {{ game.startedAt | date:'dd.MM.yyyy HH:mm:ss' }}</div>
-            <div *ngIf="game.endedAt">Ende: {{ game.endedAt | date:'HH:mm:ss' }}</div>
-          </div>
-
+      } @else if (history().length === 0) {
+        <div class="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
+          <ng-icon name="lucideHistory" class="size-8" />
+          <span>No rounds have been played yet.</span>
         </div>
-
-      </div>
-
-    </div>
-
+      } @else {
+        <div hlmTableContainer>
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr>
+                <th hlmTh>Game</th>
+                <th hlmTh>Winning exit</th>
+                <th hlmTh class="text-right">Time</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (game of history(); track game.id) {
+                <tr hlmTr>
+                  <td hlmTd>
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-xs text-muted-foreground">#{{ game.id.substring(0, 8) }}</span>
+                      <span hlmBadge [variant]="game.state === 'Finished' ? 'secondary' : 'outline'" class="w-fit">
+                        {{ game.state }}
+                      </span>
+                    </div>
+                  </td>
+                  <td hlmTd>
+                    @if (game.winningExit) {
+                      <span hlmBadge variant="outline">{{ game.winningExit }}</span>
+                    } @else {
+                      <span class="text-sm text-muted-foreground">—</span>
+                    }
+                  </td>
+                  <td hlmTd class="text-right">
+                    <div class="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                      <span>{{ game.startedAt | date: 'dd.MM.yyyy HH:mm:ss' }}</span>
+                      @if (game.endedAt) {
+                        <span>→ {{ game.endedAt | date: 'HH:mm:ss' }}</span>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
   </div>
 </div>

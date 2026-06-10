@@ -1,305 +1,247 @@
 <luckymaze-content-header>
-  <span slot="left" class="font-semibold text-lg tracking-wide bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">LuckyMaze Arena</span>
+  <span slot="left" class="text-lg font-semibold tracking-tight">LuckyMaze Arena</span>
 </luckymaze-content-header>
 
-<!-- Main Wrapper -->
-<div class="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto gap-8 bg-slate-950/20 text-slate-100 min-h-0 relative">
+<div class="relative flex flex-1 flex-col gap-8 overflow-y-auto p-4 md:p-8">
+  @if (gameStore.state() === 'Idle' || gameStore.state() === 'Countdown') {
+    <!-- Pre-game lobby -->
+    <div class="mx-auto grid w-full max-w-6xl grid-cols-1 items-start gap-8 lg:grid-cols-3">
+      <section hlmCard class="flex flex-col gap-6 p-6 lg:col-span-1">
+        <h2 class="text-xl font-semibold tracking-tight">Your profile</h2>
 
-  <!-- 1. Lobby / Pre-game Lobby States (Idle, Countdown) -->
-  <ng-container *ngIf="gameStore.state() === 'Idle' || gameStore.state() === 'Countdown'">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start max-w-6xl mx-auto w-full">
-      
-      <!-- Left side: Player ready actions -->
-      <div class="lg:col-span-1 flex flex-col gap-6 bg-slate-900/40 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-        <h2 class="text-xl font-bold tracking-tight">Dein Profil</h2>
-        
-        <div class="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-          <div class="size-12 rounded-full overflow-hidden border border-indigo-500/30 flex items-center justify-center bg-slate-800 text-lg font-bold">
+        <div class="flex items-center gap-4">
+          <hlm-avatar size="lg">
             @if (currentUser()?.avatarUrl) {
-              <img [src]="currentUser()?.avatarUrl" [alt]="currentUser()?.displayName" class="w-full h-full object-cover">
-            } @else {
-              <span>{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</span>
+              <img [src]="currentUser()?.avatarUrl" [alt]="currentUser()?.displayName" hlmAvatarImage />
             }
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-semibold truncate">{{ currentUser()?.displayName }}</div>
-            <div class="text-xs text-slate-400 truncate">{{ currentUser()?.email }}</div>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <div class="text-sm text-slate-400">Verfügbares Guthaben</div>
-          <div class="flex items-center gap-2 text-3xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-            <ng-icon name="lucideCoins" class="text-emerald-400 size-8" />
-            <span>{{ (currentInGamePlayer()?.balance || currentUser()?.balance || 0) | number:'1.2-2' }}</span>
+            <span hlmAvatarFallback>{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</span>
+          </hlm-avatar>
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-medium">{{ currentUser()?.displayName }}</div>
+            <div class="truncate text-xs text-muted-foreground">{{ currentUser()?.email }}</div>
           </div>
         </div>
 
-        <button 
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-muted-foreground">Available balance</span>
+          <div class="flex items-center gap-2 text-3xl font-bold tabular-nums">
+            <ng-icon name="lucideCoins" class="text-muted-foreground" />
+            <span>{{ currentInGamePlayer()?.balance ?? currentUser()?.balance ?? 0 | number: '1.2-2' }}</span>
+          </div>
+        </div>
+
+        <button
+          hlmBtn
+          class="w-full"
+          [variant]="currentInGamePlayer()?.isReady ? 'secondary' : 'default'"
           (click)="toggleReady()"
-          [ngClass]="{
-            'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20': currentInGamePlayer()?.isReady,
-            'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20': !currentInGamePlayer()?.isReady
-          }"
-          class="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2">
-          <ng-icon [name]="currentInGamePlayer()?.isReady ? 'lucideCheckCircle' : 'lucideInfo'" class="size-5" />
-          <span>{{ currentInGamePlayer()?.isReady ? 'Bereit!' : 'Bereit machen' }}</span>
+        >
+          <ng-icon [name]="currentInGamePlayer()?.isReady ? 'lucideCheckCircle' : 'lucideInfo'" />
+          {{ currentInGamePlayer()?.isReady ? 'Ready!' : 'Get ready' }}
         </button>
-      </div>
+      </section>
 
-      <!-- Right side: Players Lobby -->
-      <div class="lg:col-span-2 flex flex-col gap-6">
+      <section class="flex flex-col gap-6 lg:col-span-2">
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold tracking-tight">Warteraum (Lobby)</h2>
-          <div class="px-4 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            {{ gameStore.players().length }} Spieler verbunden
-          </div>
+          <h2 class="text-xl font-semibold tracking-tight">Waiting room</h2>
+          <span hlmBadge variant="secondary">{{ gameStore.players().length }} connected</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div *ngFor="let p of gameStore.players()" 
-            [ngClass]="{'border-emerald-500/30 bg-emerald-950/10': p.isReady, 'border-white/10 bg-slate-900/30': !p.isReady}"
-            class="flex items-center justify-between p-4 rounded-2xl border backdrop-blur-sm shadow-md transition-all duration-300">
-            <div class="flex items-center gap-3">
-              <div class="size-10 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center font-bold text-sm">
-                {{ p.displayName.charAt(0).toUpperCase() }}
-              </div>
-              <div>
-                <div class="font-semibold text-sm truncate max-w-[140px]">{{ p.displayName }}</div>
-                <div class="text-xs text-slate-400 flex items-center gap-1">
-                  <ng-icon name="lucideCoins" class="size-3" />
-                  <span>{{ p.balance | number:'1.0-0' }}</span>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          @for (p of gameStore.players(); track p.displayName) {
+            <div hlmCard class="flex items-center justify-between gap-3 p-4">
+              <div class="flex min-w-0 items-center gap-3">
+                <hlm-avatar size="sm">
+                  <span hlmAvatarFallback>{{ p.displayName.charAt(0).toUpperCase() }}</span>
+                </hlm-avatar>
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-medium">{{ p.displayName }}</div>
+                  <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ng-icon name="lucideCoins" class="text-xs" />
+                    <span>{{ p.balance | number: '1.0-0' }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div [ngClass]="p.isReady ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20'"
-              class="px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5">
-              <span class="size-1.5 rounded-full" [ngClass]="p.isReady ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"></span>
-              <span>{{ p.isReady ? 'Bereit' : 'Wartet' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Start condition hint -->
-        <div class="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-slate-400 mt-2">
-          <ng-icon name="lucideInfo" class="text-indigo-400 size-5 shrink-0" />
-          <span>Das Spiel startet, sobald mindestens 2 Spieler verbunden sind und 75% auf <b>Bereit</b> stehen. (Zum Testen reicht 1 Spieler).</span>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Fullscreen Countdown Overlay -->
-    <div *ngIf="gameStore.state() === 'Countdown'" 
-      class="absolute inset-0 bg-slate-950/80 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-4 transition-all duration-500 animate-in fade-in">
-      <div class="text-slate-400 text-lg uppercase tracking-widest font-semibold animate-pulse">Labyrinth wird generiert...</div>
-      <div class="text-9xl font-black text-indigo-500 select-none animate-bounce">
-        {{ gameStore.timerSeconds() }}
-      </div>
-      <div class="text-slate-400 text-sm mt-4">Wetten starten in Kürze!</div>
-    </div>
-  </ng-container>
-
-  <!-- 2. Active Game Layouts (Betting, Starting, Playing, Finished) -->
-  <ng-container *ngIf="gameStore.state() !== 'Idle' && gameStore.state() !== 'Countdown'">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto w-full min-h-0 flex-1">
-      
-      <!-- Left side (Lg size 7): Maze rendering -->
-      <div class="lg:col-span-7 flex flex-col gap-6">
-        <div class="flex items-center justify-between bg-slate-900/40 backdrop-blur-md border border-white/10 px-6 py-4 rounded-2xl">
-          <div class="flex items-center gap-2.5">
-            <span class="size-2.5 rounded-full bg-indigo-500 animate-ping"></span>
-            <span class="font-bold uppercase text-xs tracking-wider text-indigo-400">{{ gameStore.state() }}</span>
-          </div>
-
-          <!-- Timer banner -->
-          <div *ngIf="gameStore.state() === 'Betting'" class="flex items-center gap-2 text-amber-400">
-            <ng-icon name="lucideClock" class="size-5" />
-            <span class="font-mono font-black text-xl">{{ gameStore.timerSeconds() }}s</span>
-            <span class="text-xs text-slate-400">verbleibend</span>
-          </div>
-          <div *ngIf="gameStore.state() === 'Playing'" class="text-emerald-400 font-bold flex items-center gap-1.5">
-            <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>KI navigiert Labyrinth...</span>
-          </div>
-        </div>
-
-        <luckymaze-maze-renderer 
-          *ngIf="gameStore.activeMaze() as maze"
-          [width]="maze.width"
-          [height]="maze.height"
-          [gridData]="maze.gridData"
-          [exits]="maze.exits"
-          [aiPosition]="gameStore.aiCurrentPosition()">
-        </luckymaze-maze-renderer>
-      </div>
-
-      <!-- Right side (Lg size 5): Betting Board & Payouts -->
-      <div class="lg:col-span-5 flex flex-col gap-6 h-full min-h-0">
-        
-        <!-- A. Betting Phase Input Panel -->
-        <div *ngIf="gameStore.state() === 'Betting'" 
-          class="flex flex-col gap-6 bg-slate-900/40 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-bold tracking-tight">Deine Wette abgeben</h2>
-            <div class="text-xs text-slate-400 flex items-center gap-1">
-              <ng-icon name="lucideCoins" class="size-3.5" />
-              <span>Guthaben: {{ (currentInGamePlayer()?.balance || 0) | number:'1.2-2' }}</span>
-            </div>
-          </div>
-
-          <!-- Exit options grid -->
-          <div class="flex flex-col gap-3">
-            <div class="text-sm text-slate-400 font-medium">Ausgang auswählen:</div>
-            <div class="grid grid-cols-2 gap-4">
-              <button 
-                *ngFor="let exit of gameStore.activeMaze()?.exits"
-                (click)="selectExit(exit.name)"
-                [disabled]="alreadyPlacedBet() !== null"
-                [ngClass]="{
-                  'border-orange-500 bg-orange-500/10 text-orange-400 ring-2 ring-orange-500/30': selectedExit() === exit.name,
-                  'border-white/10 bg-slate-800/30 text-slate-300 hover:border-white/20': selectedExit() !== exit.name,
-                  'opacity-60 cursor-not-allowed': alreadyPlacedBet() !== null
-                }"
-                class="py-4 px-6 rounded-2xl border text-center font-bold transition-all duration-300 active:scale-[0.98] cursor-pointer">
-                {{ exit.name }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Bet amount sliders / inputs -->
-          <div class="flex flex-col gap-3 mt-2">
-            <div class="flex items-center justify-between text-sm text-slate-400">
-              <span class="font-medium">Wettbetrag:</span>
-              <span class="font-mono font-bold text-slate-200">{{ betAmount() | number }} Coins</span>
-            </div>
-            
-            <div class="flex items-center gap-3">
-              <button 
-                (click)="adjustBet(-50)"
-                [disabled]="alreadyPlacedBet() !== null"
-                class="size-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-slate-700 active:scale-[0.92] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">-</button>
-              
-              <input 
-                type="number" 
-                [(ngModel)]="betAmount"
-                [disabled]="alreadyPlacedBet() !== null"
-                class="flex-1 text-center bg-slate-950/60 border border-white/10 py-2.5 px-4 rounded-xl font-mono font-bold text-white focus:outline-none focus:border-indigo-500/50 disabled:opacity-60" />
-              
-              <button 
-                (click)="adjustBet(50)"
-                [disabled]="alreadyPlacedBet() !== null"
-                class="size-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-slate-700 active:scale-[0.92] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">+</button>
-            </div>
-
-            <!-- Quick chip buttons -->
-            <div class="grid grid-cols-4 gap-2 mt-1">
-              <button 
-                *ngFor="let quickVal of [100, 250, 500]"
-                (click)="setBetAmount(quickVal)"
-                [disabled]="alreadyPlacedBet() !== null"
-                class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-white/5 border border-white/5 hover:bg-white/10 active:scale-95 cursor-pointer disabled:opacity-40">
-                +{{ quickVal }}
-              </button>
-              <button 
-                (click)="placeMaxBet()"
-                [disabled]="alreadyPlacedBet() !== null"
-                class="py-1.5 px-3 rounded-lg text-xs font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 active:scale-95 cursor-pointer disabled:opacity-40">
-                MAX
-              </button>
-            </div>
-          </div>
-
-          <!-- Submit Bet button -->
-          <button 
-            (click)="submitBet()"
-            [disabled]="alreadyPlacedBet() !== null"
-            [ngClass]="{
-              'bg-gradient-to-r from-orange-500 to-amber-500 hover:shadow-orange-500/15': alreadyPlacedBet() === null,
-              'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 cursor-not-allowed': alreadyPlacedBet() !== null
-            }"
-            class="w-full py-4 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg mt-2 cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2">
-            <ng-icon [name]="alreadyPlacedBet() !== null ? 'lucideCheckCircle' : 'lucideCoins'" class="size-5" />
-            <span>{{ alreadyPlacedBet() !== null ? 'Wette platziert (' + alreadyPlacedBet()?.exitName + ' - ' + alreadyPlacedBet()?.amount + ')' : 'Wette abgeben' }}</span>
-          </button>
-        </div>
-
-        <!-- B. Active Bets Panel (Starting / Playing) -->
-        <div class="flex flex-col gap-4 bg-slate-900/40 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl flex-1 min-h-0">
-          <h3 class="text-md font-bold tracking-tight border-b border-white/5 pb-2">Platzierte Wetten</h3>
-          
-          <div class="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-[150px]">
-            <div *ngIf="gameStore.bets().length === 0" class="flex flex-col items-center justify-center h-full text-slate-500 text-xs py-8 gap-2">
-              <ng-icon name="lucideInfo" class="size-6 text-slate-600" />
-              <span>Noch keine Wetten für diese Runde abgegeben.</span>
-            </div>
-
-            <div *ngFor="let b of gameStore.bets()" 
-              class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 text-sm">
-              <div class="flex items-center gap-2.5">
-                <div class="size-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs">
-                  {{ b.displayName.charAt(0).toUpperCase() }}
-                </div>
-                <div class="font-medium truncate max-w-[120px]">{{ b.displayName }}</div>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="px-2 py-0.5 rounded-md text-xs font-bold bg-orange-500/10 border border-orange-500/20 text-orange-400">
-                  {{ b.exitName }}
-                </span>
-                <span class="font-mono font-bold text-slate-300">{{ b.amount | number }} Coins</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- C. Results Overlay (Finished) -->
-    <div *ngIf="gameStore.state() === 'Finished'" 
-      class="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-      
-      <div class="max-w-md w-full bg-slate-900 border border-white/10 p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center gap-6">
-        
-        <div>
-          <div class="text-xs uppercase tracking-widest font-semibold text-orange-400 animate-pulse">Runde beendet</div>
-          <h2 class="text-3xl font-black mt-1 bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">
-            Ziel erreicht!
-          </h2>
-        </div>
-
-        <div class="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1 items-center w-full">
-          <span class="text-xs text-slate-400">Gewinner Ausgang:</span>
-          <span class="text-2xl font-black text-orange-400">{{ gameStore.bets().length > 0 ? (gameStore.payouts() ? 'Auswertung abgeschlossen' : 'Auswertung...') : 'Keine Gewinner' }}</span>
-        </div>
-
-        <!-- Payouts Table -->
-        <div class="w-full flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1">
-          <div *ngFor="let p of gameStore.payouts()" 
-            class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 text-sm">
-            <div class="font-semibold">{{ p.displayName }}</div>
-            
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400">Einsatz: {{ p.betAmount }}</span>
-              <span [ngClass]="p.netProfit > 0 ? 'text-emerald-400 font-bold' : 'text-rose-400'" class="font-mono">
-                {{ p.netProfit > 0 ? '+' : '' }}{{ p.netProfit | number }} Coins
+              <span hlmBadge [variant]="p.isReady ? 'default' : 'outline'">
+                {{ p.isReady ? 'Ready' : 'Waiting' }}
               </span>
             </div>
-          </div>
+          }
         </div>
 
-        <!-- Bottom restart warning -->
-        <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-2">
-          <ng-icon name="lucideClock" class="size-4 text-indigo-400 animate-spin" />
-          <span>Neue Runde startet in {{ gameStore.timerSeconds() }} Sekunden...</span>
+        <div hlmCard class="flex items-center gap-3 p-4 text-sm text-muted-foreground">
+          <ng-icon name="lucideInfo" class="shrink-0" />
+          <span>The round starts once at least 2 players are connected and 75% are ready (1 player is enough for testing).</span>
         </div>
-
-      </div>
-
+      </section>
     </div>
 
-  </ng-container>
+    @if (gameStore.state() === 'Countdown') {
+      <div class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/90">
+        <div class="text-sm font-medium uppercase tracking-widest text-muted-foreground">Generating maze…</div>
+        <div class="text-8xl font-bold tabular-nums">{{ gameStore.timerSeconds() }}</div>
+        <div class="text-sm text-muted-foreground">Betting starts shortly.</div>
+      </div>
+    }
+  } @else {
+    <!-- Active game -->
+    <div class="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-start gap-8 lg:grid-cols-12">
+      <section class="flex flex-col gap-6 lg:col-span-7">
+        <div hlmCard class="flex items-center justify-between px-6 py-4">
+          <span hlmBadge variant="secondary" class="uppercase">{{ gameStore.state() }}</span>
 
+          @if (gameStore.state() === 'Betting') {
+            <div class="flex items-center gap-2">
+              <ng-icon name="lucideClock" class="text-muted-foreground" />
+              <span class="font-mono text-xl font-bold tabular-nums">{{ gameStore.timerSeconds() }}s</span>
+              <span class="text-xs text-muted-foreground">remaining</span>
+            </div>
+          } @else if (gameStore.state() === 'Playing') {
+            <span class="text-sm font-medium text-muted-foreground">AI is navigating the maze…</span>
+          }
+        </div>
+
+        @if (gameStore.activeMaze(); as maze) {
+          <luckymaze-maze-renderer
+            [width]="maze.width"
+            [height]="maze.height"
+            [gridData]="maze.gridData"
+            [exits]="maze.exits"
+            [aiPosition]="gameStore.aiCurrentPosition()"
+          />
+        }
+      </section>
+
+      <section class="flex h-full flex-col gap-6 lg:col-span-5">
+        @if (gameStore.state() === 'Betting') {
+          <div hlmCard class="flex flex-col gap-6 p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold tracking-tight">Place your bet</h2>
+              <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                <ng-icon name="lucideCoins" />
+                <span>{{ currentInGamePlayer()?.balance ?? 0 | number: '1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <span class="text-sm font-medium text-muted-foreground">Choose an exit</span>
+              <div class="grid grid-cols-2 gap-3">
+                @for (exit of gameStore.activeMaze()?.exits; track exit.name) {
+                  <button
+                    hlmBtn
+                    [variant]="selectedExit() === exit.name ? 'default' : 'outline'"
+                    [disabled]="alreadyPlacedBet() !== null"
+                    (click)="selectExit(exit.name)"
+                  >
+                    {{ exit.name }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-muted-foreground">Bet amount</span>
+                <span class="font-mono font-semibold tabular-nums">{{ betAmount() | number }} coins</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button hlmBtn variant="outline" size="icon" [disabled]="alreadyPlacedBet() !== null" (click)="adjustBet(-50)">−</button>
+                <input
+                  hlmInput
+                  type="number"
+                  class="flex-1 text-center font-mono"
+                  [value]="betAmount()"
+                  [disabled]="alreadyPlacedBet() !== null"
+                  (input)="setBetFromInput($any($event.target).value)"
+                />
+                <button hlmBtn variant="outline" size="icon" [disabled]="alreadyPlacedBet() !== null" (click)="adjustBet(50)">+</button>
+              </div>
+
+              <div class="grid grid-cols-4 gap-2">
+                @for (quickVal of [100, 250, 500]; track quickVal) {
+                  <button hlmBtn variant="ghost" size="sm" [disabled]="alreadyPlacedBet() !== null" (click)="setBetAmount(quickVal)">
+                    {{ quickVal }}
+                  </button>
+                }
+                <button hlmBtn variant="secondary" size="sm" [disabled]="alreadyPlacedBet() !== null" (click)="placeMaxBet()">
+                  Max
+                </button>
+              </div>
+            </div>
+
+            <button hlmBtn class="w-full" [disabled]="alreadyPlacedBet() !== null" (click)="submitBet()">
+              <ng-icon [name]="alreadyPlacedBet() !== null ? 'lucideCheckCircle' : 'lucideCoins'" />
+              @if (alreadyPlacedBet(); as bet) {
+                Bet placed ({{ bet.exitName }} · {{ bet.amount }})
+              } @else {
+                Place bet
+              }
+            </button>
+          </div>
+        }
+
+        <div hlmCard class="flex min-h-0 flex-1 flex-col gap-4 p-6">
+          <h3 class="border-b pb-2 font-semibold tracking-tight">Placed bets</h3>
+          <div class="flex min-h-[150px] flex-1 flex-col gap-2 overflow-y-auto">
+            @if (gameStore.bets().length === 0) {
+              <div class="flex h-full flex-col items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
+                <ng-icon name="lucideInfo" class="size-6" />
+                <span>No bets placed for this round yet.</span>
+              </div>
+            } @else {
+              @for (b of gameStore.bets(); track b.displayName) {
+                <div class="flex items-center justify-between rounded-md border p-3 text-sm">
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <hlm-avatar size="sm">
+                      <span hlmAvatarFallback>{{ b.displayName.charAt(0).toUpperCase() }}</span>
+                    </hlm-avatar>
+                    <span class="truncate font-medium">{{ b.displayName }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span hlmBadge variant="outline">{{ b.exitName }}</span>
+                    <span class="font-mono font-semibold tabular-nums">{{ b.amount | number }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+
+    @if (gameStore.state() === 'Finished') {
+      <div class="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-background/90">
+        <section hlmCard class="flex w-full max-w-md flex-col items-center gap-6 p-8 text-center">
+          <div>
+            <div class="text-xs font-medium uppercase tracking-widest text-muted-foreground">Round complete</div>
+            <h2 class="mt-1 text-3xl font-bold tracking-tight">Exit reached</h2>
+          </div>
+
+          <div class="flex w-full max-h-[220px] flex-col gap-2 overflow-y-auto">
+            @for (p of gameStore.payouts(); track p.displayName) {
+              <div class="flex items-center justify-between rounded-md border p-3 text-sm">
+                <span class="font-medium">{{ p.displayName }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-muted-foreground">Stake {{ p.betAmount }}</span>
+                  <span
+                    class="font-mono tabular-nums"
+                    [class.text-emerald-500]="p.netProfit > 0"
+                    [class.text-destructive]="p.netProfit <= 0"
+                  >
+                    {{ p.netProfit > 0 ? '+' : '' }}{{ p.netProfit | number }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ng-icon name="lucideClock" />
+            <span>New round starts in {{ gameStore.timerSeconds() }}s.</span>
+          </div>
+        </section>
+      </div>
+    }
+  }
 </div>
