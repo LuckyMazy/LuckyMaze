@@ -1,5 +1,3 @@
-using System;
-
 namespace LuckyMaze.Domain.Enums
 {
     [Flags]

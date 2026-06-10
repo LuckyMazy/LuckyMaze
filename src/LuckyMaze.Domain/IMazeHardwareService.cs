@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using LuckyMaze.Domain.Enums;
 
 namespace LuckyMaze.Domain

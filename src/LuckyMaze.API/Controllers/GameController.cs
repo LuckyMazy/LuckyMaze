@@ -59,8 +59,6 @@ namespace LuckyMaze.API.Controllers
         }
     }
 
-    #region Request models
-
     public class ToggleReadyRequest
     {
         public bool IsReady { get; set; }
@@ -71,6 +69,4 @@ namespace LuckyMaze.API.Controllers
         public required string ExitName { get; set; }
         public decimal Amount { get; set; }
     }
-
-    #endregion
 }

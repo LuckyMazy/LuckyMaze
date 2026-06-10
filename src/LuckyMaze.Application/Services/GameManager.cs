@@ -1,10 +1,5 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,7 +19,6 @@ namespace LuckyMaze.Application.Services
         private readonly IGameNotificationService _notificationService;
         private readonly ILogger<GameManager> _logger;
 
-        // In-memory states
         private GameState _state = GameState.Idle;
         private Guid? _currentGameId;
         private Maze? _currentMaze;
@@ -55,11 +49,9 @@ namespace LuckyMaze.Application.Services
         public int TimerSeconds => _timerSeconds;
         public Maze? CurrentMaze => _currentMaze;
 
-        #region Background loop
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("GameManager Background loop started.");
+            _logger.LogInformation("GameManager background loop started.");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -82,7 +74,6 @@ namespace LuckyMaze.Application.Services
             {
                 _timerSeconds--;
                 await _notificationService.BroadcastCountdownTickAsync(_timerSeconds);
-                _logger.LogInformation("Countdown Tick: {Sec}s remaining", _timerSeconds);
 
                 if (_timerSeconds <= 0)
                 {
@@ -119,29 +110,22 @@ namespace LuckyMaze.Application.Services
             }
         }
 
-        #endregion
-
-        #region State transitions
-
         private async Task TransitionToCountdownAsync()
         {
             _state = GameState.Countdown;
             _timerSeconds = 3;
-            _logger.LogInformation("Game state transitioned to Countdown.");
             await BroadcastGameStateAsync();
         }
 
         private async Task TransitionToBettingAsync()
         {
             _state = GameState.Betting;
-            _timerSeconds = 30; // 30 seconds for placing bets
+            _timerSeconds = 30;
             _bets.Clear();
 
-            // Generate Maze
-            _currentMaze = _mazeGenerator.Generate(7, 7, 2);
+            _currentMaze = _mazeGenerator.Generate(23, 23, 2);
 
-            // Save Maze and Game to PostgreSQL
-            using (var scope = _scopeFactory.CreateScope())
+            await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
 
@@ -161,9 +145,8 @@ namespace LuckyMaze.Application.Services
                 _currentGameId = game.Id;
             }
 
-            _logger.LogInformation("Game state transitioned to Betting. Generated maze {MazeId} & game {GameId}", _currentMaze.Id, _currentGameId);
-            
-            // Broadcast Maze and State
+            _logger.LogInformation("Betting started. Generated maze {MazeId} & game {GameId}", _currentMaze.Id, _currentGameId);
+
             var exits = JsonSerializer.Deserialize<List<MazeExit>>(_currentMaze.Exits) ?? new();
             await _notificationService.BroadcastMazeGeneratedAsync(new
             {
@@ -188,9 +171,8 @@ namespace LuckyMaze.Application.Services
 
             _state = GameState.Starting;
             _timerSeconds = 3;
-            _logger.LogInformation("Game state transitioned to Starting (Bets locked).");
 
-            using (var scope = _scopeFactory.CreateScope())
+            await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
                 var game = await dbContext.Games.FindAsync(_currentGameId);
@@ -207,9 +189,8 @@ namespace LuckyMaze.Application.Services
         private async Task TransitionToPlayingAsync(CancellationToken stoppingToken)
         {
             _state = GameState.Playing;
-            _logger.LogInformation("Game state transitioned to Playing.");
 
-            using (var scope = _scopeFactory.CreateScope())
+            await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
                 var game = await dbContext.Games.FindAsync(_currentGameId);
@@ -222,28 +203,24 @@ namespace LuckyMaze.Application.Services
 
             await BroadcastGameStateAsync();
 
-            // Run simulation path calculation
-            Coordinate startCoord = new Coordinate(_currentMaze!.Width / 2, _currentMaze.Height / 2);
+            var startCoord = new Coordinate(_currentMaze!.Width / 2, _currentMaze.Height / 2);
             _aiPath = _aiSolver.Solve(_currentMaze, startCoord);
             _currentStep = 0;
 
-            // Trigger asynchronous simulation steps
             _ = Task.Run(() => RunSimulationAsync(stoppingToken), stoppingToken);
         }
 
         private async Task RunSimulationAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Starting AI simulation run with {Steps} steps.", _aiPath.Count);
-            
-            // Initialize physical/mock hardware
+
             await _hardwareService.InitializeAsync(_currentMaze!);
 
             while (_currentStep < _aiPath.Count && _state == GameState.Playing && !stoppingToken.IsCancellationRequested)
             {
                 var current = _aiPath[_currentStep];
-                
-                // Determine direction
-                Direction dir = Direction.None;
+
+                var dir = Direction.None;
                 if (_currentStep > 0)
                 {
                     var prev = _aiPath[_currentStep - 1];
@@ -253,53 +230,43 @@ namespace LuckyMaze.Application.Services
                     else if (current.X < prev.X) dir = Direction.West;
                 }
 
-                _logger.LogInformation("AI Step {Step}/{Total}: ({X}, {Y}) - {Dir}", _currentStep, _aiPath.Count - 1, current.X, current.Y, dir);
-
-                // Update physical actuators/LEDs
                 await _hardwareService.ShowStepAsync(current.X, current.Y, dir);
-
-                // Broadcast step to web clients
                 await _notificationService.BroadcastAiStepAsync(current.X, current.Y, dir.ToString());
 
                 if (_currentStep == _aiPath.Count - 1)
                 {
-                    // AI reached exit!
                     await FinishGameAsync(current);
                     break;
                 }
 
                 _currentStep++;
-                await Task.Delay(850, stoppingToken); // watchers pace
+                await Task.Delay(850, stoppingToken);
             }
         }
 
         private async Task FinishGameAsync(Coordinate exitCoord)
         {
             _state = GameState.Finished;
-            _timerSeconds = 10; // 10 seconds display results before resetting
+            _timerSeconds = 10;
 
-            // Determine which exit was reached
             var exits = JsonSerializer.Deserialize<List<MazeExit>>(_currentMaze!.Exits) ?? new();
             var matchedExit = exits.FirstOrDefault(e => e.X == exitCoord.X && e.Y == exitCoord.Y);
             string winningExitName = matchedExit?.Name ?? "Unknown Exit";
 
             _logger.LogInformation("AI reached exit: {ExitName}. Processing payouts...", winningExitName);
 
-            // Trigger physical flash
             await _hardwareService.FlashWinnerAsync(winningExitName);
 
-            // Payout calculation variables
             decimal totalPool = _bets.Values.Sum(b => b.Amount);
             var winningBets = _bets.Values.Where(b => b.ExitName.Equals(winningExitName, StringComparison.OrdinalIgnoreCase)).ToList();
             decimal winningPool = winningBets.Sum(b => b.Amount);
 
             var payoutsList = new List<PayoutDetail>();
 
-            using (var scope = _scopeFactory.CreateScope())
+            await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
 
-                // Get bets from database for update
                 var dbBets = await dbContext.Bets.Where(b => b.GameId == _currentGameId).ToListAsync();
                 var dbUsers = await dbContext.Users.Where(u => _players.ContainsKey(u.ExternalId)).ToListAsync();
 
@@ -310,13 +277,12 @@ namespace LuckyMaze.Application.Services
 
                     if (dbBet.ExitName.Equals(winningExitName, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Player won! Payout proportional to size of their bet in winning pool
+                        // Winnings are proportional to the bet's share of the winning pool.
                         decimal earnings = (dbBet.Amount / winningPool) * totalPool;
-                        
+
                         dbBet.Status = BetStatus.Won;
                         player.Balance += earnings;
 
-                        // Track in payouts
                         payoutsList.Add(new PayoutDetail
                         {
                             DisplayName = player.DisplayName,
@@ -325,7 +291,6 @@ namespace LuckyMaze.Application.Services
                             NetProfit = earnings - dbBet.Amount
                         });
 
-                        // Update in-memory player balance
                         if (_players.TryGetValue(player.ExternalId, out var connectedPlayer))
                         {
                             connectedPlayer.Balance = player.Balance;
@@ -333,7 +298,6 @@ namespace LuckyMaze.Application.Services
                     }
                     else
                     {
-                        // Player lost
                         dbBet.Status = BetStatus.Lost;
 
                         payoutsList.Add(new PayoutDetail
@@ -346,7 +310,7 @@ namespace LuckyMaze.Application.Services
                     }
                 }
 
-                // Auto-replenish bankrupt players to 1,000
+                // Auto-replenish bankrupt players so they can keep playing.
                 foreach (var player in dbUsers)
                 {
                     if (player.Balance <= 0)
@@ -359,7 +323,6 @@ namespace LuckyMaze.Application.Services
                     }
                 }
 
-                // Update Game status in database
                 var game = await dbContext.Games.FindAsync(_currentGameId);
                 if (game != null)
                 {
@@ -371,7 +334,6 @@ namespace LuckyMaze.Application.Services
                 await dbContext.SaveChangesAsync();
             }
 
-            // Broadcast results
             await _notificationService.BroadcastGameFinishedAsync(winningExitName, payoutsList);
             await BroadcastGameStateAsync();
         }
@@ -386,7 +348,6 @@ namespace LuckyMaze.Application.Services
             _currentStep = 0;
             _bets.Clear();
 
-            // Reset all player ready statuses
             foreach (var player in _players.Values)
             {
                 player.IsReady = false;
@@ -397,84 +358,73 @@ namespace LuckyMaze.Application.Services
             await BroadcastGameStateAsync();
         }
 
-        #endregion
-
-        #region Player actions
-
         public async Task PlayerConnectedAsync(string externalId, string connectionId)
         {
-            using (var scope = _scopeFactory.CreateScope())
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
+            var user = await dbContext.Users.SingleOrDefaultAsync(u => u.ExternalId == externalId);
+
+            if (user == null) return;
+
+            _players[externalId] = new ConnectedPlayer
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
-                var user = await dbContext.Users.SingleOrDefaultAsync(u => u.ExternalId == externalId);
+                UserId = user.Id,
+                ExternalId = user.ExternalId,
+                DisplayName = user.DisplayName,
+                ConnectionId = connectionId,
+                Balance = user.Balance,
+                IsReady = false
+            };
 
-                if (user != null)
-                {
-                    var player = new ConnectedPlayer
-                    {
-                        UserId = user.Id,
-                        ExternalId = user.ExternalId,
-                        DisplayName = user.DisplayName,
-                        ConnectionId = connectionId,
-                        Balance = user.Balance,
-                        IsReady = false
-                    };
-
-                    _players[externalId] = player;
-                    _logger.LogInformation("Player connected: {Name} (Conn: {Conn})", player.DisplayName, connectionId);
-
-                    await BroadcastGameStateAsync();
-                }
-            }
+            _logger.LogInformation("Player connected: {Name} (Conn: {Conn})", user.DisplayName, connectionId);
+            await BroadcastGameStateAsync();
         }
 
         public async Task PlayerDisconnectedAsync(string connectionId)
         {
             var pair = _players.FirstOrDefault(p => p.Value.ConnectionId == connectionId);
-            if (pair.Key != null)
+            if (pair.Key == null) return;
+
+            _players.TryRemove(pair.Key, out var removedPlayer);
+            _logger.LogInformation("Player disconnected: {Name} (Conn: {Conn})", removedPlayer?.DisplayName, connectionId);
+
+            // If a disconnect breaks the start condition mid-countdown, abort the round.
+            if (_state == GameState.Countdown)
             {
-                _players.TryRemove(pair.Key, out var removedPlayer);
-                _logger.LogInformation("Player disconnected: {Name} (Conn: {Conn})", removedPlayer?.DisplayName, connectionId);
-                
-                // Re-evaluate start condition if player disconnects during countdown
-                if (_state == GameState.Countdown)
+                int total = _players.Count;
+                int ready = _players.Values.Count(p => p.IsReady);
+                if (!ShouldStart(total, ready))
                 {
-                    int total = _players.Count;
-                    int ready = _players.Values.Count(p => p.IsReady);
-                    if (!ShouldStart(total, ready))
-                    {
-                        _logger.LogInformation("Start conditions no longer met after disconnect. Resetting to Idle.");
-                        await ResetToIdleAsync();
-                    }
+                    _logger.LogInformation("Start conditions no longer met after disconnect. Resetting to Idle.");
+                    await ResetToIdleAsync();
                 }
-                else
-                {
-                    await BroadcastGameStateAsync();
-                }
+            }
+            else
+            {
+                await BroadcastGameStateAsync();
             }
         }
 
         public async Task ToggleReadyAsync(string externalId, bool isReady)
         {
-            if (_players.TryGetValue(externalId, out var player))
+            if (!_players.TryGetValue(externalId, out var player)) return;
+
+            player.IsReady = isReady;
+            _logger.LogInformation("Player {Name} toggled ready state to {IsReady}", player.DisplayName, isReady);
+
+            if (_state == GameState.Idle)
             {
-                player.IsReady = isReady;
-                _logger.LogInformation("Player {Name} toggled ready state to {IsReady}", player.DisplayName, isReady);
+                int total = _players.Count;
+                int ready = _players.Values.Count(p => p.IsReady);
 
-                if (_state == GameState.Idle)
+                if (ShouldStart(total, ready))
                 {
-                    int total = _players.Count;
-                    int ready = _players.Values.Count(p => p.IsReady);
-
-                    if (ShouldStart(total, ready))
-                    {
-                        await TransitionToCountdownAsync();
-                        return;
-                    }
+                    await TransitionToCountdownAsync();
+                    return;
                 }
-
-                await BroadcastGameStateAsync();
             }
+
+            await BroadcastGameStateAsync();
         }
 
         public async Task PlaceBetAsync(string externalId, string exitName, decimal amount)
@@ -494,10 +444,9 @@ namespace LuckyMaze.Application.Services
                 return;
             }
 
-            // Dedect balance from in-memory
             player.Balance -= amount;
 
-            var bet = new PlayerBet
+            _bets[externalId] = new PlayerBet
             {
                 UserId = player.UserId,
                 DisplayName = player.DisplayName,
@@ -505,37 +454,31 @@ namespace LuckyMaze.Application.Services
                 Amount = amount
             };
 
-            _bets[externalId] = bet;
             _logger.LogInformation("Player {Name} bet {Amount} on {Exit}", player.DisplayName, amount, exitName);
 
-            // Save Bet to database and update user balance
-            using (var scope = _scopeFactory.CreateScope())
+            await using (var scope = _scopeFactory.CreateAsyncScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
-                
-                // Deduct balance from DB
+
                 var dbUser = await dbContext.Users.FindAsync(player.UserId);
                 if (dbUser != null)
                 {
                     dbUser.Balance = player.Balance;
                 }
 
-                // Add Bet to DB
-                var dbBet = new Bet
+                dbContext.Bets.Add(new Bet
                 {
                     GameId = _currentGameId!.Value,
                     PlayerId = player.UserId,
                     ExitName = exitName,
                     Amount = amount,
                     Status = BetStatus.Pending
-                };
-                dbContext.Bets.Add(dbBet);
+                });
                 await dbContext.SaveChangesAsync();
             }
 
             await BroadcastGameStateAsync();
 
-            // Check if all connected players have bet
             if (_bets.Count == _players.Count)
             {
                 _logger.LogInformation("All connected players have placed bets. Starting game immediately.");
@@ -547,7 +490,7 @@ namespace LuckyMaze.Application.Services
         {
             if (total == 0) return false;
             if (total == 1) return ready == 1; // Solo testing
-            return ready >= total * 0.75;      // 75% rule
+            return ready >= total * 0.75; // 75% rule
         }
 
         private async Task BroadcastGameStateAsync()
@@ -573,37 +516,5 @@ namespace LuckyMaze.Application.Services
 
             await _notificationService.BroadcastGameStateAsync(gameStateDto);
         }
-
-        #endregion
     }
-
-    #region Helper model classes
-
-    public class ConnectedPlayer
-    {
-        public Guid UserId { get; set; }
-        public required string ExternalId { get; set; }
-        public required string DisplayName { get; set; }
-        public required string ConnectionId { get; set; }
-        public decimal Balance { get; set; }
-        public bool IsReady { get; set; }
-    }
-
-    public class PlayerBet
-    {
-        public Guid UserId { get; set; }
-        public required string DisplayName { get; set; }
-        public required string ExitName { get; set; }
-        public decimal Amount { get; set; }
-    }
-
-    public class PayoutDetail
-    {
-        public required string DisplayName { get; set; }
-        public decimal BetAmount { get; set; }
-        public decimal PayoutAmount { get; set; }
-        public decimal NetProfit { get; set; }
-    }
-
-    #endregion
 }
