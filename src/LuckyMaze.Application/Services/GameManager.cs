@@ -123,7 +123,7 @@ namespace LuckyMaze.Application.Services
             _timerSeconds = 30;
             _bets.Clear();
 
-            _currentMaze = _mazeGenerator.Generate(7, 7, 2);
+            _currentMaze = _mazeGenerator.Generate(23, 23, 2);
 
             await using (var scope = _scopeFactory.CreateAsyncScope())
             {
