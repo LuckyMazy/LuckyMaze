@@ -33,5 +33,17 @@ namespace LuckyMaze.API.Controllers
 
             return BadRequest(result.Error);
         }
+
+        [HttpGet("leaderboard")]
+        [ProducesResponseType(typeof(List<LeaderboardEntryDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetLeaderboard([FromQuery] int limit = 10, CancellationToken cancellationToken = default)
+        {
+            var result = await mediator.Send(new GetLeaderboardQuery(limit), cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+
+            return BadRequest(result.Error);
+        }
     }
 }

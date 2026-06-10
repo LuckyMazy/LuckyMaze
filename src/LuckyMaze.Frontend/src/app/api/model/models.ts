@@ -2,3 +2,8 @@ export * from './appDto';
 export * from './problemDetails';
 export * from './userDto';
 export * from './userRole';
+export * from './mazeCell';
+export * from './mazeExit';
+export * from './activeGameDetailsDto';
+export * from './gameHistoryDto';
+export * from './leaderboardEntryDto';

@@ -17,6 +17,8 @@ export interface UserDto {
     avatarUrl?: string | null;
     role?: UserRole;
     isLocked?: boolean;
+    balance?: number;
+    isReady?: boolean;
 }
 export namespace UserDto {
 }
