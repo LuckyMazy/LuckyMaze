@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using LuckyMaze.Domain;
 
 namespace LuckyMaze.Application.Services

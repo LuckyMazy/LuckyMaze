@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using LuckyMaze.Domain;
 
@@ -12,41 +9,38 @@ namespace LuckyMaze.Application.Services
 
         public List<Coordinate> Solve(Maze maze, Coordinate start)
         {
-            var cellsList = JsonSerializer.Deserialize<List<MazeCell>>(maze.GridData) 
+            var cellsList = JsonSerializer.Deserialize<List<MazeCell>>(maze.GridData)
                 ?? throw new InvalidOperationException("Failed to deserialize maze cells.");
-            var exitsList = JsonSerializer.Deserialize<List<MazeExit>>(maze.Exits) 
+            var exitsList = JsonSerializer.Deserialize<List<MazeExit>>(maze.Exits)
                 ?? throw new InvalidOperationException("Failed to deserialize maze exits.");
 
             int width = maze.Width;
             int height = maze.Height;
 
-            // Map cells for quick lookups by coordinate
             var gridMap = cellsList.ToDictionary(c => new Coordinate(c.X, c.Y));
             var exitCoords = exitsList.Select(e => new Coordinate(e.X, e.Y)).ToHashSet();
 
-            // 1. Train Q-learning agent on the generated maze layout
             double[,] qTable = TrainAgent(width, height, gridMap, exitCoords, start);
 
-            // 2. Simulate gameplay path using Epsilon-Greedy policy (15% randomness for unpredictability)
+            // A small amount of randomness keeps the run unpredictable for spectators.
             return SimulatePath(width, height, gridMap, exitCoords, start, qTable, epsilon: 0.15);
         }
 
         private double[,] TrainAgent(int width, int height, Dictionary<Coordinate, MazeCell> gridMap, HashSet<Coordinate> exits, Coordinate start)
         {
             int numStates = width * height;
-            int numActions = 4; // 0: North, 1: East, 2: South, 3: West
+            int numActions = 4; // North, East, South, West
             double[,] qTable = new double[numStates, numActions];
 
-            // Hyperparameters
-            double alpha = 0.2;     // Learning rate
-            double gamma = 0.9;     // Discount factor
-            double epsilon = 0.3;   // Exploration rate during training
-            int episodes = 1500;    // Number of training iterations
+            double alpha = 0.2; // Learning rate
+            double gamma = 0.9; // Discount factor
+            double epsilon = 0.3; // Exploration rate (decayed each episode)
+            int episodes = 1500;
             int maxSteps = width * height * 2;
 
             for (int episode = 0; episode < episodes; episode++)
             {
-                // Start training at start coordinate or a random non-exit coordinate to generalize paths
+                // Bias toward the real start, but sometimes begin elsewhere to generalize.
                 Coordinate current = _random.NextDouble() < 0.3 ? start : GetRandomState(width, height, exits);
                 int steps = 0;
 
@@ -56,40 +50,30 @@ namespace LuckyMaze.Application.Services
                     var validActions = GetValidActions(current, gridMap);
 
                     if (validActions.Count == 0)
-                        break; // Dead end (shouldn't happen in a valid perfect maze)
+                        break;
 
-                    int action;
-                    if (_random.NextDouble() < epsilon)
-                    {
-                        // Explore
-                        action = validActions[_random.Next(validActions.Count)];
-                    }
-                    else
-                    {
-                        // Exploit
-                        action = GetBestAction(stateIdx, validActions, qTable);
-                    }
+                    int action = _random.NextDouble() < epsilon
+                        ? validActions[_random.Next(validActions.Count)]
+                        : GetBestAction(stateIdx, validActions, qTable);
 
                     Coordinate next = Move(current, action);
                     double reward = exits.Contains(next) ? 100.0 : -1.0;
 
                     int nextStateIdx = GetStateIndex(next, width);
                     var nextValidActions = GetValidActions(next, gridMap);
-                    
+
                     double maxNextQ = 0.0;
                     if (nextValidActions.Count > 0 && !exits.Contains(next))
                     {
                         maxNextQ = nextValidActions.Max(a => qTable[nextStateIdx, a]);
                     }
 
-                    // Q-learning update formula
                     qTable[stateIdx, action] += alpha * (reward + gamma * maxNextQ - qTable[stateIdx, action]);
 
                     current = next;
                     steps++;
                 }
 
-                // Decay epsilon
                 epsilon = Math.Max(0.01, epsilon * 0.995);
             }
 
@@ -100,7 +84,7 @@ namespace LuckyMaze.Application.Services
         {
             var path = new List<Coordinate> { start };
             Coordinate current = start;
-            int maxSteps = width * height * 4; // Safely avoid infinite loops
+            int maxSteps = width * height * 4; // Guard against infinite loops
             int steps = 0;
 
             while (!exits.Contains(current) && steps < maxSteps)
@@ -111,27 +95,14 @@ namespace LuckyMaze.Application.Services
                 if (validActions.Count == 0)
                     break;
 
-                int action;
-                // Epsilon-Greedy choice (15% random chance for suspense)
-                if (_random.NextDouble() < epsilon)
-                {
-                    action = validActions[_random.Next(validActions.Count)];
-                }
-                else
-                {
-                    action = GetBestAction(stateIdx, validActions, qTable);
-                }
+                int action = _random.NextDouble() < epsilon
+                    ? validActions[_random.Next(validActions.Count)]
+                    : GetBestAction(stateIdx, validActions, qTable);
 
                 current = Move(current, action);
                 path.Add(current);
                 steps++;
             }
-
-            // If we broke out of the loop and ended up in an exit's adjacent neighbor,
-            // make sure we step out of the maze if the wall is broken
-            // (The exits are on the border, but we can step one unit out if needed, or consider the border cell as the exit).
-            // In our ChooseExits method, border cells themselves are marked as exits.
-            // When we reach the border cell (the exit), we have reached the exit state.
 
             return path;
         }
@@ -143,9 +114,9 @@ namespace LuckyMaze.Application.Services
                 return valid;
 
             if (!cell.North) valid.Add(0);
-            if (!cell.East)  valid.Add(1);
+            if (!cell.East) valid.Add(1);
             if (!cell.South) valid.Add(2);
-            if (!cell.West)  valid.Add(3);
+            if (!cell.West) valid.Add(3);
 
             return valid;
         }

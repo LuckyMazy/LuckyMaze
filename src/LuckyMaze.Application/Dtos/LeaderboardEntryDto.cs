@@ -1,5 +1,3 @@
-using System;
-
 namespace LuckyMaze.Application.Dtos
 {
     public record LeaderboardEntryDto(

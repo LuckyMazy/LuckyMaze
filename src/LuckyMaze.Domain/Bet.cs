@@ -1,4 +1,3 @@
-using System;
 using LuckyMaze.Domain.Enums;
 
 namespace LuckyMaze.Domain

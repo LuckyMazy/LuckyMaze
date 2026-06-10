@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using LuckyMaze.API.Hubs;
 using LuckyMaze.Application.Services;

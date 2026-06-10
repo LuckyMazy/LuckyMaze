@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using LuckyMaze.Domain;
 
@@ -18,7 +15,6 @@ namespace LuckyMaze.Application.Services
             if (exitCount < 2)
                 throw new ArgumentException("Maze must have at least 2 exits.");
 
-            // 1. Initialize grid of cells with all walls up
             var grid = new MazeCell[width, height];
             for (int x = 0; x < width; x++)
             {
@@ -28,11 +24,10 @@ namespace LuckyMaze.Application.Services
                 }
             }
 
-            // 2. DFS Maze Generation
+            // Carve a perfect maze with an iterative depth-first search from the center.
             var stack = new Stack<MazeCell>();
             var visited = new HashSet<MazeCell>();
-            
-            // Start DFS at center of the maze
+
             var startCell = grid[width / 2, height / 2];
             visited.Add(startCell);
             stack.Push(startCell);
@@ -44,12 +39,8 @@ namespace LuckyMaze.Application.Services
 
                 if (neighbors.Count > 0)
                 {
-                    // Choose a random neighbor
                     var next = neighbors[_random.Next(neighbors.Count)];
-                    
-                    // Remove wall between current and next
                     RemoveWall(current, next);
-                    
                     visited.Add(next);
                     stack.Push(next);
                 }
@@ -59,7 +50,6 @@ namespace LuckyMaze.Application.Services
                 }
             }
 
-            // 3. Create exits on the borders
             var exits = ChooseExits(width, height, exitCount);
             foreach (var exit in exits)
             {
@@ -70,7 +60,6 @@ namespace LuckyMaze.Application.Services
                 else if (exit.X == 0) cell.West = false;
             }
 
-            // 4. Flatten grid for JSON serialization
             var flatGrid = new List<MazeCell>();
             for (int y = 0; y < height; y++)
             {
@@ -81,7 +70,7 @@ namespace LuckyMaze.Application.Services
             }
 
             var options = new JsonSerializerOptions { WriteIndented = false };
-            
+
             return new Maze
             {
                 Width = width,
@@ -95,19 +84,15 @@ namespace LuckyMaze.Application.Services
         {
             var neighbors = new List<MazeCell>();
 
-            // North neighbor
             if (cell.Y > 0 && !visited.Contains(grid[cell.X, cell.Y - 1]))
                 neighbors.Add(grid[cell.X, cell.Y - 1]);
 
-            // East neighbor
             if (cell.X < width - 1 && !visited.Contains(grid[cell.X + 1, cell.Y]))
                 neighbors.Add(grid[cell.X + 1, cell.Y]);
 
-            // South neighbor
             if (cell.Y < height - 1 && !visited.Contains(grid[cell.X, cell.Y + 1]))
                 neighbors.Add(grid[cell.X, cell.Y + 1]);
 
-            // West neighbor
             if (cell.X > 0 && !visited.Contains(grid[cell.X - 1, cell.Y]))
                 neighbors.Add(grid[cell.X - 1, cell.Y]);
 
@@ -116,22 +101,22 @@ namespace LuckyMaze.Application.Services
 
         private void RemoveWall(MazeCell current, MazeCell next)
         {
-            if (next.Y < current.Y) // Next is North
+            if (next.Y < current.Y)
             {
                 current.North = false;
                 next.South = false;
             }
-            else if (next.X > current.X) // Next is East
+            else if (next.X > current.X)
             {
                 current.East = false;
                 next.West = false;
             }
-            else if (next.Y > current.Y) // Next is South
+            else if (next.Y > current.Y)
             {
                 current.South = false;
                 next.North = false;
             }
-            else if (next.X < current.X) // Next is West
+            else if (next.X < current.X)
             {
                 current.West = false;
                 next.East = false;
@@ -142,21 +127,19 @@ namespace LuckyMaze.Application.Services
         {
             var borderCells = new List<(int X, int Y)>();
 
-            // Collect North/South border cells (excluding corners to keep math simple)
+            // Border cells excluding corners, so each exit sits on a single wall.
             for (int x = 1; x < width - 1; x++)
             {
-                borderCells.Add((x, 0)); // North
-                borderCells.Add((x, height - 1)); // South
+                borderCells.Add((x, 0));
+                borderCells.Add((x, height - 1));
             }
 
-            // Collect East/West border cells (excluding corners)
             for (int y = 1; y < height - 1; y++)
             {
-                borderCells.Add((width - 1, y)); // East
-                borderCells.Add((0, y)); // West
+                borderCells.Add((width - 1, y));
+                borderCells.Add((0, y));
             }
 
-            // Shuffle border cells
             borderCells = borderCells.OrderBy(_ => _random.Next()).ToList();
 
             var selectedExits = new List<MazeExit>();

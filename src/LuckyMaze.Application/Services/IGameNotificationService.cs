@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace LuckyMaze.Application.Services
 {
     public interface IGameNotificationService

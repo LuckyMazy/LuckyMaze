@@ -1,9 +1,6 @@
-using System;
 using System.IO.Ports;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using LuckyMaze.Domain;
@@ -73,8 +70,8 @@ namespace LuckyMaze.Infrastructure.Services
 
             try
             {
-                // SerialPort write is synchronous but fast. We run it in Task to keep execution non-blocking
-                await Task.Run(() => 
+                // SerialPort writes are synchronous; run off the loop to stay non-blocking.
+                await Task.Run(() =>
                 {
                     lock (_serialPort)
                     {
@@ -120,18 +117,14 @@ namespace LuckyMaze.Infrastructure.Services
             }
         }
 
-        #region IMazeHardwareService implementation
-
         public async Task InitializeAsync(Maze maze)
         {
             _logger.LogInformation("Initializing physical maze layout.");
 
-            // 1. Tell Pico to draw the new maze grid on the 64x64 panel
-            // We serialize the maze cells list to send to the Pico or send a simple dimensions setup command
+            // Send the grid to the Pico: dimensions, then one CELL line per cell.
             await SendSerialCommandAsync($"INIT {maze.Width} {maze.Height}");
 
-            // Send cells in a structured format: CELL X Y North East South West
-            var cells = JsonSerializer.Deserialize<System.Collections.Generic.List<MazeCell>>(maze.GridData) ?? new();
+            var cells = JsonSerializer.Deserialize<List<MazeCell>>(maze.GridData) ?? new();
             foreach (var cell in cells)
             {
                 int n = cell.North ? 1 : 0;
@@ -141,14 +134,12 @@ namespace LuckyMaze.Infrastructure.Services
                 await SendSerialCommandAsync($"CELL {cell.X} {cell.Y} {n} {e} {s} {w}");
             }
 
-            // Tell Pico cells list is fully sent
             await SendSerialCommandAsync("GRID_COMPLETE");
 
-            // 2. Home Klipper printer and prepare coordinates
             await SendGCodeAsync("G28"); // Home all axes
             await SendGCodeAsync("G90"); // Absolute positioning
-            
-            // Move toolhead (magnetic carriage) to start cell (center of the maze)
+
+            // Move the magnetic carriage to the center start cell.
             decimal startX = (maze.Width / 2) * _cellSizeMm;
             decimal startY = (maze.Height / 2) * _cellSizeMm;
             await SendGCodeAsync($"G1 X{startX:F1} Y{startY:F1} F3000");
@@ -158,10 +149,8 @@ namespace LuckyMaze.Infrastructure.Services
         {
             _logger.LogInformation("Pushed step to hardware: ({X}, {Y}) moving {Direction}", x, y, direction);
 
-            // 1. Tell Pico to light up/update path leading to the new cell
             await SendSerialCommandAsync($"STEP {x} {y} {direction}");
 
-            // 2. Send G-Code to move physical carriage to the coordinates
             decimal posX = x * _cellSizeMm;
             decimal posY = y * _cellSizeMm;
             await SendGCodeAsync($"G1 X{posX:F1} Y{posY:F1} F2400");
@@ -190,8 +179,6 @@ namespace LuckyMaze.Infrastructure.Services
             // Move stepper motors to safe park coordinates (0, 0)
             await SendGCodeAsync("G1 X0 Y0 F3000");
         }
-
-        #endregion
 
         public void Dispose()
         {
