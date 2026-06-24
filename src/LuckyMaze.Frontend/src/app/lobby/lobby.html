@@ -1,0 +1,247 @@
+<luckymaze-content-header>
+  <span slot="left" class="text-lg font-semibold tracking-tight">LuckyMaze Arena</span>
+</luckymaze-content-header>
+
+<div class="relative flex flex-1 flex-col gap-8 overflow-y-auto p-4 md:p-8">
+  @if (gameStore.state() === 'Idle' || gameStore.state() === 'Countdown') {
+    <!-- Pre-game lobby -->
+    <div class="mx-auto grid w-full max-w-6xl grid-cols-1 items-start gap-8 lg:grid-cols-3">
+      <section hlmCard class="flex flex-col gap-6 p-6 lg:col-span-1">
+        <h2 class="text-xl font-semibold tracking-tight">Your profile</h2>
+
+        <div class="flex items-center gap-4">
+          <hlm-avatar size="lg">
+            @if (currentUser()?.avatarUrl) {
+              <img [src]="currentUser()?.avatarUrl" [alt]="currentUser()?.displayName" hlmAvatarImage />
+            }
+            <span hlmAvatarFallback>{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</span>
+          </hlm-avatar>
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-medium">{{ currentUser()?.displayName }}</div>
+            <div class="truncate text-xs text-muted-foreground">{{ currentUser()?.email }}</div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-muted-foreground">Available balance</span>
+          <div class="flex items-center gap-2 text-3xl font-bold tabular-nums">
+            <ng-icon name="lucideCoins" class="text-muted-foreground" />
+            <span>{{ currentInGamePlayer()?.balance ?? currentUser()?.balance ?? 0 | number: '1.2-2' }}</span>
+          </div>
+        </div>
+
+        <button
+          hlmBtn
+          class="w-full"
+          [variant]="currentInGamePlayer()?.isReady ? 'secondary' : 'default'"
+          (click)="toggleReady()"
+        >
+          <ng-icon [name]="currentInGamePlayer()?.isReady ? 'lucideCheckCircle' : 'lucideInfo'" />
+          {{ currentInGamePlayer()?.isReady ? 'Ready!' : 'Get ready' }}
+        </button>
+      </section>
+
+      <section class="flex flex-col gap-6 lg:col-span-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold tracking-tight">Waiting room</h2>
+          <span hlmBadge variant="secondary">{{ gameStore.players().length }} connected</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          @for (p of gameStore.players(); track p.displayName) {
+            <div hlmCard class="flex items-center justify-between gap-3 p-4">
+              <div class="flex min-w-0 items-center gap-3">
+                <hlm-avatar size="sm">
+                  <span hlmAvatarFallback>{{ p.displayName.charAt(0).toUpperCase() }}</span>
+                </hlm-avatar>
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-medium">{{ p.displayName }}</div>
+                  <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ng-icon name="lucideCoins" class="text-xs" />
+                    <span>{{ p.balance | number: '1.0-0' }}</span>
+                  </div>
+                </div>
+              </div>
+              <span hlmBadge [variant]="p.isReady ? 'default' : 'outline'">
+                {{ p.isReady ? 'Ready' : 'Waiting' }}
+              </span>
+            </div>
+          }
+        </div>
+
+        <div hlmCard class="flex items-center gap-3 p-4 text-sm text-muted-foreground">
+          <ng-icon name="lucideInfo" class="shrink-0" />
+          <span>The round starts once at least 2 players are connected and 75% are ready (1 player is enough for testing).</span>
+        </div>
+      </section>
+    </div>
+
+    @if (gameStore.state() === 'Countdown') {
+      <div class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/90">
+        <div class="text-sm font-medium uppercase tracking-widest text-muted-foreground">Generating maze…</div>
+        <div class="text-8xl font-bold tabular-nums">{{ gameStore.timerSeconds() }}</div>
+        <div class="text-sm text-muted-foreground">Betting starts shortly.</div>
+      </div>
+    }
+  } @else {
+    <!-- Active game -->
+    <div class="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-start gap-8 lg:grid-cols-12">
+      <section class="flex flex-col gap-6 lg:col-span-7">
+        <div hlmCard class="flex items-center justify-between px-6 py-4">
+          <span hlmBadge variant="secondary" class="uppercase">{{ gameStore.state() }}</span>
+
+          @if (gameStore.state() === 'Betting') {
+            <div class="flex items-center gap-2">
+              <ng-icon name="lucideClock" class="text-muted-foreground" />
+              <span class="font-mono text-xl font-bold tabular-nums">{{ gameStore.timerSeconds() }}s</span>
+              <span class="text-xs text-muted-foreground">remaining</span>
+            </div>
+          } @else if (gameStore.state() === 'Playing') {
+            <span class="text-sm font-medium text-muted-foreground">AI is navigating the maze…</span>
+          }
+        </div>
+
+        @if (gameStore.activeMaze(); as maze) {
+          <luckymaze-maze-renderer
+            [width]="maze.width"
+            [height]="maze.height"
+            [gridData]="maze.gridData"
+            [exits]="maze.exits"
+            [aiPosition]="gameStore.aiCurrentPosition()"
+          />
+        }
+      </section>
+
+      <section class="flex h-full flex-col gap-6 lg:col-span-5">
+        @if (gameStore.state() === 'Betting') {
+          <div hlmCard class="flex flex-col gap-6 p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold tracking-tight">Place your bet</h2>
+              <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                <ng-icon name="lucideCoins" />
+                <span>{{ currentInGamePlayer()?.balance ?? 0 | number: '1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <span class="text-sm font-medium text-muted-foreground">Choose an exit</span>
+              <div class="grid grid-cols-2 gap-3">
+                @for (exit of gameStore.activeMaze()?.exits; track exit.name) {
+                  <button
+                    hlmBtn
+                    [variant]="selectedExit() === exit.name ? 'default' : 'outline'"
+                    [disabled]="alreadyPlacedBet() !== null"
+                    (click)="selectExit(exit.name)"
+                  >
+                    {{ exit.name }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-muted-foreground">Bet amount</span>
+                <span class="font-mono font-semibold tabular-nums">{{ betAmount() | number }} coins</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button hlmBtn variant="outline" size="icon" [disabled]="alreadyPlacedBet() !== null" (click)="adjustBet(-50)">−</button>
+                <input
+                  hlmInput
+                  type="number"
+                  class="flex-1 text-center font-mono"
+                  [value]="betAmount()"
+                  [disabled]="alreadyPlacedBet() !== null"
+                  (input)="setBetFromInput($any($event.target).value)"
+                />
+                <button hlmBtn variant="outline" size="icon" [disabled]="alreadyPlacedBet() !== null" (click)="adjustBet(50)">+</button>
+              </div>
+
+              <div class="grid grid-cols-4 gap-2">
+                @for (quickVal of [100, 250, 500]; track quickVal) {
+                  <button hlmBtn variant="ghost" size="sm" [disabled]="alreadyPlacedBet() !== null" (click)="setBetAmount(quickVal)">
+                    {{ quickVal }}
+                  </button>
+                }
+                <button hlmBtn variant="secondary" size="sm" [disabled]="alreadyPlacedBet() !== null" (click)="placeMaxBet()">
+                  Max
+                </button>
+              </div>
+            </div>
+
+            <button hlmBtn class="w-full" [disabled]="alreadyPlacedBet() !== null" (click)="submitBet()">
+              <ng-icon [name]="alreadyPlacedBet() !== null ? 'lucideCheckCircle' : 'lucideCoins'" />
+              @if (alreadyPlacedBet(); as bet) {
+                Bet placed ({{ bet.exitName }} · {{ bet.amount }})
+              } @else {
+                Place bet
+              }
+            </button>
+          </div>
+        }
+
+        <div hlmCard class="flex min-h-0 flex-1 flex-col gap-4 p-6">
+          <h3 class="border-b pb-2 font-semibold tracking-tight">Placed bets</h3>
+          <div class="flex min-h-[150px] flex-1 flex-col gap-2 overflow-y-auto">
+            @if (gameStore.bets().length === 0) {
+              <div class="flex h-full flex-col items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
+                <ng-icon name="lucideInfo" class="size-6" />
+                <span>No bets placed for this round yet.</span>
+              </div>
+            } @else {
+              @for (b of gameStore.bets(); track b.displayName) {
+                <div class="flex items-center justify-between rounded-md border p-3 text-sm">
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <hlm-avatar size="sm">
+                      <span hlmAvatarFallback>{{ b.displayName.charAt(0).toUpperCase() }}</span>
+                    </hlm-avatar>
+                    <span class="truncate font-medium">{{ b.displayName }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span hlmBadge variant="outline">{{ b.exitName }}</span>
+                    <span class="font-mono font-semibold tabular-nums">{{ b.amount | number }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+
+    @if (gameStore.state() === 'Finished') {
+      <div class="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-background/90">
+        <section hlmCard class="flex w-full max-w-md flex-col items-center gap-6 p-8 text-center">
+          <div>
+            <div class="text-xs font-medium uppercase tracking-widest text-muted-foreground">Round complete</div>
+            <h2 class="mt-1 text-3xl font-bold tracking-tight">Exit reached</h2>
+          </div>
+
+          <div class="flex w-full max-h-[220px] flex-col gap-2 overflow-y-auto">
+            @for (p of gameStore.payouts(); track p.displayName) {
+              <div class="flex items-center justify-between rounded-md border p-3 text-sm">
+                <span class="font-medium">{{ p.displayName }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-muted-foreground">Stake {{ p.betAmount }}</span>
+                  <span
+                    class="font-mono tabular-nums"
+                    [class.text-emerald-500]="p.netProfit > 0"
+                    [class.text-destructive]="p.netProfit <= 0"
+                  >
+                    {{ p.netProfit > 0 ? '+' : '' }}{{ p.netProfit | number }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ng-icon name="lucideClock" />
+            <span>New round starts in {{ gameStore.timerSeconds() }}s.</span>
+          </div>
+        </section>
+      </div>
+    }
+  }
+</div>

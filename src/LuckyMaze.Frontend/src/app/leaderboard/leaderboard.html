@@ -1,0 +1,78 @@
+<luckymaze-content-header>
+  <div slot="left" class="flex items-center gap-2">
+    <a routerLink="/" hlmBtn variant="ghost" size="icon-sm" aria-label="Back to home">
+      <ng-icon name="lucideArrowLeft" />
+    </a>
+    <span class="text-lg font-semibold tracking-tight">Leaderboard</span>
+  </div>
+</luckymaze-content-header>
+
+<div class="flex-1 overflow-y-auto p-4 md:p-8">
+  <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div class="flex flex-col gap-1">
+      <h2 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <ng-icon name="lucideTrophy" class="text-muted-foreground" />
+        Top players
+      </h2>
+      <p class="text-sm text-muted-foreground">Ranked by current coin balance.</p>
+    </div>
+
+    <section hlmCard>
+      @if (isLoading()) {
+        <div class="flex items-center justify-center gap-3 py-16 text-muted-foreground">
+          <hlm-spinner class="size-5" />
+          <span>Loading leaderboard…</span>
+        </div>
+      } @else if (leaderboard().length === 0) {
+        <div class="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
+          <ng-icon name="lucideTrophy" class="size-8" />
+          <span>No players registered yet.</span>
+        </div>
+      } @else {
+        <div hlmTableContainer>
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr>
+                <th hlmTh class="w-16 text-center">Rank</th>
+                <th hlmTh>Player</th>
+                <th hlmTh class="text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (entry of leaderboard(); track entry.displayName; let i = $index) {
+                <tr hlmTr>
+                  <td hlmTd class="text-center">
+                    @if (i < 3) {
+                      <ng-icon
+                        [name]="i === 0 ? 'lucideTrophy' : 'lucideMedal'"
+                        class="mx-auto"
+                        [class.text-amber-500]="i === 0"
+                        [class.text-muted-foreground]="i !== 0"
+                      />
+                    } @else {
+                      <span class="text-sm text-muted-foreground">{{ i + 1 }}</span>
+                    }
+                  </td>
+                  <td hlmTd>
+                    <div class="flex items-center gap-3">
+                      <hlm-avatar size="sm">
+                        @if (entry.avatarUrl) {
+                          <img [src]="entry.avatarUrl" [alt]="entry.displayName" hlmAvatarImage />
+                        }
+                        <span hlmAvatarFallback>{{ entry.displayName.charAt(0).toUpperCase() }}</span>
+                      </hlm-avatar>
+                      <span class="font-medium">{{ entry.displayName }}</span>
+                    </div>
+                  </td>
+                  <td hlmTd class="text-right font-medium tabular-nums">
+                    {{ entry.balance | number: '1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </div>
+</div>

@@ -8,4 +8,6 @@ public record UserDto(
     string DisplayName,
     string? AvatarUrl,
     UserRole Role,
-    bool IsLocked);
+    bool IsLocked,
+    decimal Balance,
+    bool IsReady);

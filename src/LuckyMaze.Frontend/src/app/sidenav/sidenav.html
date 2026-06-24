@@ -4,7 +4,7 @@
       <ul hlmSidebarMenu>
         <li hlmSidebarMenuItem>
           <a hlmSidebarMenuButton size="lg" routerLink="/">
-            <img src="icon.svg" alt="LuckyMaze" class="size-8" />
+            <img src="icon.png" alt="LuckyMaze" class="size-8 rounded-md" />
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">LuckyMaze</span>
               <span class="truncate text-xs">Beta</span>
@@ -20,6 +20,24 @@
           <a hlmSidebarMenuButton routerLink="/">
             <ng-icon name="lucideHouse" />
             <span>Home</span>
+          </a>
+        </li>
+        <li hlmSidebarMenuItem>
+          <a hlmSidebarMenuButton routerLink="/lobby">
+            <ng-icon name="lucideGamepad2" />
+            <span>Play / Lobby</span>
+          </a>
+        </li>
+        <li hlmSidebarMenuItem>
+          <a hlmSidebarMenuButton routerLink="/leaderboard">
+            <ng-icon name="lucideTrophy" />
+            <span>Leaderboard</span>
+          </a>
+        </li>
+        <li hlmSidebarMenuItem>
+          <a hlmSidebarMenuButton routerLink="/history">
+            <ng-icon name="lucideHistory" />
+            <span>Game History</span>
           </a>
         </li>
       </ul>
