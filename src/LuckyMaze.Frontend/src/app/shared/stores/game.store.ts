@@ -3,7 +3,8 @@ import { patchState, signalStore, withHooks, withMethods, withState } from '@ngr
 import { GameSignalRService } from '../services/game-signalr.service';
 import { MazeCell } from '../../api/model/mazeCell';
 import { MazeExit } from '../../api/model/mazeExit';
-import { Subscription } from 'rxjs';
+import { GameService } from '../../api/api/game.service';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 export type GameStoreState = {
   state: string;
@@ -54,6 +55,7 @@ export const GameStore = signalStore(
   withState(initialGameStore),
   withMethods((store) => {
     const signalrService = inject(GameSignalRService);
+    const gameService = inject(GameService);
     let subscriptions: Subscription[] = [];
 
     async function init(): Promise<void> {
@@ -114,6 +116,22 @@ export const GameStore = signalStore(
 
       try {
         await signalrService.startConnection();
+        const activeGame = await firstValueFrom(gameService.apiGameCurrentGet());
+        
+        if (activeGame) {
+          patchState(store, {
+            state: activeGame.state,
+            timerSeconds: activeGame.timerSeconds,
+            activeMaze: activeGame.gridData ? {
+              mazeId: '', // id not explicitly in dto but that's ok
+              width: activeGame.width || 0,
+              height: activeGame.height || 0,
+              gridData: activeGame.gridData,
+              exits: activeGame.exits || []
+            } : null,
+            aiCurrentPosition: activeGame.gridData ? { x: Math.floor((activeGame.width||0) / 2), y: Math.floor((activeGame.height||0) / 2) } : null,
+          });
+        }
       } catch (err) {
         console.error('Failed to establish SignalR connection in GameStore:', err);
       }
