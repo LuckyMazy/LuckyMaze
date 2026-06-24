@@ -91,10 +91,16 @@
           <span hlmBadge variant="secondary" class="uppercase">{{ gameStore.state() }}</span>
 
           @if (gameStore.state() === 'Betting') {
-            <div class="flex items-center gap-2">
-              <ng-icon name="lucideClock" class="text-muted-foreground" />
+            <div class="flex items-center gap-2 transition-colors duration-300"
+                 [class.text-destructive]="gameStore.timerSeconds() <= 5"
+                 [class.animate-pulse]="gameStore.timerSeconds() <= 5">
+              @if (gameStore.timerSeconds() > 5) {
+                <ng-icon name="lucideClock" class="text-muted-foreground" />
+              } @else {
+                <ng-icon name="lucideAlertTriangle" class="text-destructive" />
+              }
               <span class="font-mono text-xl font-bold tabular-nums">{{ gameStore.timerSeconds() }}s</span>
-              <span class="text-xs text-muted-foreground">remaining</span>
+              <span class="text-xs" [class.text-destructive]="gameStore.timerSeconds() <= 5" [class.text-muted-foreground]="gameStore.timerSeconds() > 5">remaining</span>
             </div>
           } @else if (gameStore.state() === 'Playing') {
             <span class="text-sm font-medium text-muted-foreground">AI is navigating the maze…</span>

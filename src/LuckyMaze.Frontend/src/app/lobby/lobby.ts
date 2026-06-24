@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal, effect } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCheckCircle, lucideClock, lucideCoins, lucideInfo } from '@ng-icons/lucide';
+import { lucideCheckCircle, lucideClock, lucideCoins, lucideInfo, lucideAlertTriangle } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmBadge } from '@spartan-ng/helm/badge';
@@ -28,13 +28,23 @@ const MIN_BET = 10;
     ContentHeader,
     MazeRenderer,
   ],
-  providers: [provideIcons({ lucideCheckCircle, lucideClock, lucideCoins, lucideInfo })],
+  providers: [provideIcons({ lucideCheckCircle, lucideClock, lucideCoins, lucideInfo, lucideAlertTriangle })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lobby.html',
 })
 export class LobbyComponent implements OnInit, OnDestroy {
   protected readonly gameStore = inject(GameStore);
   protected readonly userStore = inject(UserStore);
+
+  constructor() {
+    effect(() => {
+      const state = this.gameStore.state();
+      const seconds = this.gameStore.timerSeconds();
+      if (state === 'Betting' && seconds > 0 && seconds <= 5) {
+        this.playWarningBeep(seconds);
+      }
+    });
+  }
 
   protected readonly selectedExit = signal('');
   protected readonly betAmount = signal(100);
@@ -112,5 +122,29 @@ export class LobbyComponent implements OnInit, OnDestroy {
     }
 
     void this.gameStore.placeBet(exit, amount);
+  }
+
+  private playWarningBeep(seconds: number): void {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      // Pitch goes up as time runs out (500Hz to 900Hz)
+      const frequency = 400 + (6 - seconds) * 100;
+      osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+      
+      const duration = 0.12;
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {
+      console.warn('Web Audio API warning:', e);
+    }
   }
 }

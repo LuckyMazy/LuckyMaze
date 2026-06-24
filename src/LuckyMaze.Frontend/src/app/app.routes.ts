@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { autoLoginPartialRoutesGuard } from 'angular-auth-oidc-client';
 import { AppLayout } from './shared/layouts/app-layout/app-layout';
-import { Home } from './home/home';
 
 export const routes: Routes = [
   {
@@ -9,7 +8,7 @@ export const routes: Routes = [
     component: AppLayout,
     canActivateChild: [autoLoginPartialRoutesGuard],
     children: [
-      { path: '', component: Home },
+      { path: '', pathMatch: 'full', redirectTo: 'lobby' },
       { path: 'lobby', loadComponent: () => import('./lobby/lobby').then(m => m.LobbyComponent) },
       { path: 'leaderboard', loadComponent: () => import('./leaderboard/leaderboard').then(m => m.LeaderboardComponent) },
       { path: 'history', loadComponent: () => import('./history/history').then(m => m.HistoryComponent) },
