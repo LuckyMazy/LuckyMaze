@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using LuckyMaze.Domain;
 using LuckyMaze.Domain.Enums;
 using LuckyMaze.Infrastructure;
+using LuckyMaze.Infrastructure.Services;
 
 namespace LuckyMaze.Application.Services
 {
@@ -25,6 +26,7 @@ namespace LuckyMaze.Application.Services
         private List<Coordinate> _aiPath = new();
         private int _currentStep = 0;
         private int _timerSeconds = 0;
+        private GameSettings? _currentGameSettings;
 
         private readonly ConcurrentDictionary<string, ConnectedPlayer> _players = new();
         private readonly ConcurrentDictionary<string, PlayerBet> _bets = new();
@@ -123,11 +125,15 @@ namespace LuckyMaze.Application.Services
             _timerSeconds = 30;
             _bets.Clear();
 
-            _currentMaze = _mazeGenerator.Generate(23, 23, 2);
-
             await using (var scope = _scopeFactory.CreateAsyncScope())
             {
+                var settingsService = scope.ServiceProvider.GetRequiredService<IGameSettingsService>();
+                _currentGameSettings = await settingsService.GetSettingsAsync();
+
                 var dbContext = scope.ServiceProvider.GetRequiredService<LuckyMazeDbContext>();
+
+                int size = (int)_currentGameSettings.MazeSize;
+                _currentMaze = _mazeGenerator.Generate(size, size, 2);
 
                 dbContext.Mazes.Add(_currentMaze);
                 await dbContext.SaveChangesAsync();
@@ -240,7 +246,8 @@ namespace LuckyMaze.Application.Services
                 }
 
                 _currentStep++;
-                await Task.Delay(850, stoppingToken);
+                int delayMs = _currentGameSettings?.GameSpeedMs ?? 850;
+                await Task.Delay(delayMs, stoppingToken);
             }
         }
 
@@ -438,9 +445,12 @@ namespace LuckyMaze.Application.Services
             if (!_players.TryGetValue(externalId, out var player))
                 return;
 
-            if (amount <= 0 || player.Balance < amount)
+            decimal minBet = _currentGameSettings?.MinBet ?? 1.00m;
+            decimal maxBet = _currentGameSettings?.MaxBet ?? 500.00m;
+
+            if (amount <= 0 || player.Balance < amount || amount < minBet || amount > maxBet)
             {
-                _logger.LogWarning("Bet rejected: Invalid amount or insufficient balance. Balance: {Bal}, Bet: {Bet}", player.Balance, amount);
+                _logger.LogWarning("Bet rejected: Invalid amount. Balance: {Bal}, Bet: {Bet}, Min: {Min}, Max: {Max}", player.Balance, amount, minBet, maxBet);
                 return;
             }
 
