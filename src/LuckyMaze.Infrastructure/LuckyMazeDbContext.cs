@@ -10,6 +10,7 @@ namespace LuckyMaze.Infrastructure
         public DbSet<Maze> Mazes => Set<Maze>();
         public DbSet<Game> Games => Set<Game>();
         public DbSet<Bet> Bets => Set<Bet>();
+        public DbSet<GameSettings> Settings => Set<GameSettings>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
