@@ -81,6 +81,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOidcService, OidcService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IGameSettingsService, GameSettingsService>();
 builder.Services.AddSingleton<IMazeGenerator, MazeGenerator>();
 builder.Services.AddSingleton<IAiSolver, AiSolver>();
 builder.Services.AddSingleton<IMazeHardwareService, MazeHardwareService>();
