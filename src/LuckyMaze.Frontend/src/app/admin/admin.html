@@ -9,35 +9,35 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-zinc-300">Maze Size</label>
-        <select formControlName="mazeSize" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-shadow appearance-none cursor-pointer">
-          <option *ngFor="let size of mazeSizes" [ngValue]="size.value">{{ size.label }}</option>
+        <label hlmLabel>Maze Size</label>
+        <select hlmNativeSelect formControlName="mazeSize">
+          <option *ngFor="let size of mazeSizes" [ngValue]="size.value" hlmNativeSelectOption>{{ size.label }}</option>
         </select>
         <p class="text-xs text-zinc-500">Determines the dimensions of the generated maze.</p>
       </div>
 
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-zinc-300">Game Speed (ms)</label>
-        <input type="number" formControlName="gameSpeedMs" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-shadow">
+        <label hlmLabel>Game Speed (ms)</label>
+        <input type="number" hlmInput formControlName="gameSpeedMs" class="w-full">
         <p class="text-xs text-zinc-500">Delay between AI steps. Lower is faster.</p>
       </div>
 
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-zinc-300">Minimum Bet</label>
-        <input type="number" step="0.01" formControlName="minBet" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-shadow">
+        <label hlmLabel>Minimum Bet</label>
+        <input type="number" step="0.01" hlmInput formControlName="minBet" class="w-full">
         <p class="text-xs text-zinc-500">The smallest bet allowed.</p>
       </div>
 
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-zinc-300">Maximum Bet</label>
-        <input type="number" step="1" formControlName="maxBet" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-shadow">
+        <label hlmLabel>Maximum Bet</label>
+        <input type="number" step="1" hlmInput formControlName="maxBet" class="w-full">
         <p class="text-xs text-zinc-500">The largest bet allowed.</p>
       </div>
       
     </div>
 
     <div class="pt-4 border-t border-zinc-800 flex justify-end">
-      <button type="submit" [disabled]="settingsForm.invalid" class="bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded font-medium transition-colors">
+      <button type="submit" hlmBtn [disabled]="settingsForm.invalid">
         Save Settings
       </button>
     </div>

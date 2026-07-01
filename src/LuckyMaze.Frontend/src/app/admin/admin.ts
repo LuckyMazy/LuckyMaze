@@ -3,11 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SettingsService, GameSettings, MazeSize } from '../api/api/settings.service';
 import { toast } from '@spartan-ng/brain/sonner';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmLabelImports } from '@spartan-ng/helm/label';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule,
+    HlmInputImports,
+    HlmButtonImports,
+    HlmLabelImports,
+    HlmNativeSelectImports
+  ],
   templateUrl: './admin.html',
 })
 export class AdminComponent implements OnInit {
