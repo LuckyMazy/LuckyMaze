@@ -32,11 +32,22 @@ namespace LuckyMaze.API.Extensions
                             return;
 
                         var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<LuckyMaze.Infrastructure.LuckyMazeDbContext>();
 
-                        if (await userService.ExistsAsync(externalId, context.HttpContext.RequestAborted))
-                            return;
+                        var user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleOrDefaultAsync(
+                            dbContext.Users, u => u.ExternalId == externalId, context.HttpContext.RequestAborted);
 
-                        await userService.SyncCurrentUserAsync(context.HttpContext.RequestAborted);
+                        if (user is null)
+                        {
+                            await userService.SyncCurrentUserAsync(context.HttpContext.RequestAborted);
+                            user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleOrDefaultAsync(
+                                dbContext.Users, u => u.ExternalId == externalId, context.HttpContext.RequestAborted);
+                        }
+
+                        if (user is not null && user.Role == LuckyMaze.Domain.Enums.UserRole.Admin)
+                        {
+                            identity.AddClaim(new Claim("groups", "admin"));
+                        }
                     };
                 });
 
