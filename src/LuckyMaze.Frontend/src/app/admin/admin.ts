@@ -7,6 +7,7 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmCardImports } from '@spartan-ng/helm/card';
 
 @Component({
   selector: 'app-admin',
@@ -17,7 +18,8 @@ import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
     HlmInputImports,
     HlmButtonImports,
     HlmLabelImports,
-    HlmNativeSelectImports
+    HlmNativeSelectImports,
+    HlmCardImports
   ],
   templateUrl: './admin.html',
 })
